@@ -5,26 +5,6 @@ import matplotlib.pyplot as plt
 rho = 0.99  #evaporation coefficient
 
 
-######## initial
-#for nora (travelling salesman)
-
-
-np.random.seed(0)			#to get each time the same random numbers
-
-points = []
-ants = []
-for i in range(10):
-	pos = np.random.rand(2)
-	points.append(waypoint(pos))
-	ants.append(ant(pos))
-
-########
-
-n = len(points)
-feromone = np.ones((n,n)) #initialize feromone at t0
-
-
-
 
 class ant:
 	''' ant object, has attributes of position'''
@@ -35,9 +15,12 @@ class ant:
 
 
 class waypoint:
+	num = 0
 	''' class object of a waypoint, has attribute of position '''
 	def __init__(self,xy):
 		self.position = xy
+		self.id = self.num + 1
+		waypoint.num = self.id
 
 
 
@@ -67,7 +50,26 @@ def prob(feromone,d):
 def main():
 	t = 0
 	while t < 100:
-		pass
+		break
+
+######## initial
+#for nora (travelling salesman)
+
+
+np.random.seed(0)			#to get each time the same random numbers
+
+points = []
+ants = []
+for i in range(10):
+	pos = np.random.rand(2)
+	points.append(waypoint(pos))
+	ants.append(ant(pos))
+
+########
+
+n = len(points)
+feromone = np.ones((n,n)) #initialize feromone at t0
+
 
 
 
