@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 
 rho = 0.99  #evaporation coefficient
-
+Q = 1		#constant quantity
 
 
 class ant:
@@ -33,7 +33,10 @@ def update_feromone(f,ant_list):
 	f_new = np.copy(f)
 	for i in range(len(f)):
 		for j in range(len(f)):
-			pass
+			s = 0
+			for k in ant_list:
+				s += f[i][j]*rho + Q/k.last_path #this is wrong!!
+			f_new[i][j] = s
 
 def decision(probabilities):
 	#quinten
@@ -58,7 +61,6 @@ def main():
 def initial_condition(n=10,set_seed=True):
 	if set_seed:
 		np.random.seed(0)			#to get each time the same random numbers
-
 	points = []
 	ants = []
 	for i in range(n):
