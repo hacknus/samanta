@@ -55,24 +55,25 @@ def main():
 ######## initial
 #for nora (travelling salesman)
 
+def initial_condition(n=10,set_seed=True):
+	if set_seed:
+		np.random.seed(0)			#to get each time the same random numbers
 
-np.random.seed(0)			#to get each time the same random numbers
-
-points = []
-ants = []
-for i in range(10):
-	pos = np.random.rand(2)
-	points.append(waypoint(pos))
-	ants.append(ant(pos))
+	points = []
+	ants = []
+	for i in range(n):
+		pos = np.random.rand(2)
+		points.append(waypoint(pos))
+		ants.append(ant(pos))
+	feromone = np.ones((n,n)) #initialize feromone at t0
+	return points,ants,feromone
 
 ########
-
-n = len(points)
-feromone = np.ones((n,n)) #initialize feromone at t0
 
 
 
 
 
 if __name__ == '__main__':
+	points,ants,feromone = initial_condition()
 	main()
