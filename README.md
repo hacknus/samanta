@@ -1,2 +1,2 @@
-# samanta
-SIM II
+# samANTa
+Super Advanced Multi Ant Algorithm
