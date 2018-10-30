@@ -10,22 +10,76 @@ Q = 1		#constant quantity
 class ant:
 	''' ant object, has attributes of position'''
 	def __init__(self,xy):
-		self.position = xy
+		self.position = np.array(xy)
+		self.alive = True
 		self.tabu = []
 		self.last_path = None
 
+	def make_move(self,feromone,waypoints):
+		''' 
+		takes feromone and a list of all distances to waypoints as arguments
+		and then calls probability and decision function in order to make a move
+		'''
+		d = self.calc_dist(waypoints)
+		self.tabu.append(self.position)
+		probabilities = self.prob(feromone,d)
+		dec = self.decision(probabilities)
+		if not self.alive:
+			return False
+		self.position = dec
+		self.last_path = [ self.tabu[-1], self.position ]
+		return True
+
+	def calc_dist(self,waypoints):
+		'''
+		takes waypoints-list as argument
+		returns a dictionary of all distances to the waypoints
+		in the shape of:
+		d = { 	<object1> : float,
+				<object2> : float,
+				....
+			}
+		where the keys of the dictionary are the waypoint objects
+		(this makes it easier to find out which distance corresponds to which waypoint)
+		'''
+		d = {}
+		for w in waypoints:
+			d[w] = np.linalg.norm(self.position-w.position)
+		return d
+
+	def decision(self,probabilities):
+		'''
+		this function takes probabilities as argument but also needs to check if the decision 
+		is not in the tabu list, else it should make another decision, and if no waypoint is left
+		i.e. all are elements of the tabu list, then this function should call the kill_ant() function and return False
+		'''
+
+		#quinten
+		
+		choice = probabilities[0] #as a test, will always return the first possiblity
+		return choice
+
+	def prob(self,feromone,d):
+		''' takes feromone strength and distances (list) to next point as arguments 
+			returns the probabilities (list) of choosing these paths'''
+		p = [1]
+		return p
+
+	def kill_ant(self):
+		''' this function kills the ant, it should be called when it has visited all waypoints '''
+		self.alive = False
 
 class waypoint:
 	num = 0
 	''' class object of a waypoint, has attribute of position '''
 	def __init__(self,xy):
-		self.position = xy
+		self.position = np.array(xy)
 		self.id = self.num + 1
 		waypoint.num = self.id
 
 def delta(k,p,i,j):
 	'''
-	takes k-th ant, point list and indices i and j as input
+	takes k-th ant, point list and indices i and j as arguments
 	and returns value of 
 	delta tau
 	'''
@@ -36,7 +90,7 @@ def delta(k,p,i,j):
 
 
 def update_feromone(f,ant_list,point_list):
-	''' takes feromone matrix, ant list and point list as input and'''
+	''' takes feromone matrix, ant list and point list as arguments and returns the new feromone matrix'''
 	#linus (1. method ant quantity)
 	#could be vectorized
 
@@ -50,16 +104,6 @@ def update_feromone(f,ant_list,point_list):
 			f_new[i][j] = s
 	return f_new
 
-def decision(probabilities):
-	#quinten
-	choice = 0
-	return choice
-
-def prob(feromone,d):
-	''' takes feromone strength and distance to next point as input 
-		returns the probability of choosing this path'''
-	p = 1
-	return p
 
 
 def init():
@@ -78,7 +122,7 @@ def animate(i):
 
 def initial_condition(n=20,set_seed=True):
 	'''
-	takes number of waypoints and a boolean as inputs
+	takes number of waypoints and a boolean as arguments
 	if boolean is true, then the seed will be fixed such that on every run the 'random' values are the same
 	this makes it easy to compare in the debug phase
 	'''
@@ -106,7 +150,7 @@ def initial_condition(n=20,set_seed=True):
 
 def draw_all_paths(p,feromone,paths=[]):
 	'''
-	takes waypoints and feromone as inputs, optionally previously drawn paths
+	takes waypoints and feromone as arguments, optionally previously drawn paths
 	this function then draws all paths according to the feromone level
 	and returns a list of all matplotlib line-objects (so they can be deleted later on)
 	'''
@@ -133,7 +177,7 @@ if __name__ == '__main__':
 	#line, = ax.plot(x, np.sin(x))
 
 	points,ants,feromone = initial_condition()
-
+	dead_ants = []
 
 	#get list of coordinates for plotting purposes
 	coordinates_points = np.array([ [p.position[0],p.position[1]] for p in points])
@@ -152,8 +196,18 @@ if __name__ == '__main__':
 	while t < 100:
 		feromone = update_feromone(feromone,ants,points)
 		paths = draw_all_paths(coordinates_points,feromone,paths)
-
-
+		for a in ants:
+			#let all ants make a move
+			if not a.make_move(feromone,points):
+				# if the ant is dead, add it to the list
+				dead_ants.append(a)
+		# after the loop above is finished we remove all dead ants from the ant list
+		# we have to do this after finishing the loop in order to avoid list out of range error!
+		for a in dead_ants:
+			ants.remove(a)
+		if not ants:
+			#if no more ants are alive, break
+			break
 		t += 1 
 		break
 	#ani = animation.FuncAnimation(fig, animate, np.arange(1, 200), blit=False, interval=10,repeat=False, init_func=init)
