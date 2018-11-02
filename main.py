@@ -64,6 +64,8 @@ class ant:
 	def prob(self,feromone,d):
 		''' takes feromone strength and distances (list) to next point as arguments 
 			returns the probabilities (list) of choosing these paths'''
+
+		#this is not done yet, returns just one element for testing purposes
 		p = [list(d.keys())[0]]
 		return p
 
