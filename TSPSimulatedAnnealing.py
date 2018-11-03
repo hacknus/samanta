@@ -12,7 +12,6 @@ class Waypoint:
         Waypoint.num = self.id
 
 
-
 def change_config1(config):
     """
 randomly changes configuration: e.g.: a--b--c--d--e--f ==> a--e--d--c--b--f
@@ -30,23 +29,32 @@ randomly inserts a part of the config somewhere else, e.g. a--b--c--d--e--f ==> 
     """
     return config
 
-def cost_func(config):
+
+def cost(config):
     """
 calculates cost resp. distance for the configuration
     """
     pass
 
-def acceptance_probability(cost_change, temp):
+
+def acceptance_probability(config_k, config_k1, tempk):
     """
 Determines probability of accepting the new config
-    :param cost_change: relative change in cost between old config and new config
-    :param temp: current temperature
+    :param config_k: config at time k
+    :param config_k1: config at time k+1
+    :param temp: temp at time k
     :return p: probability of acceptance
     """
+    delta = cost(config_k1) - cost(config_k)
+    if delta <= 0:
+        p = 1
+    else:
+        p = np.exp(-delta / tempk)
+    return p
+
+
+def decision(p):
     pass
-
-
-
 
 
 def main():
