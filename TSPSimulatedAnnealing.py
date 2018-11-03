@@ -11,23 +11,13 @@ class Waypoint:
         self.id = self.num + 1
         Waypoint.num = self.id
 
-
-def change_config1(config):
+def temp_0(waypoints):
     """
-randomly changes configuration: e.g.: a--b--c--d--e--f ==> a--e--d--c--b--f
-    arg: old config
-    return: new config
+estimates a good starting temperature
+    :param waypoints: used waypoints
+    :return start temperatur
     """
-    return config
-
-
-def change_config2(config):
-    """
-randomly inserts a part of the config somewhere else, e.g. a--b--c--d--e--f ==> a--d--e--b--c--f
-    :param config: old config
-    :return: new config
-    """
-    return config
+    pass
 
 
 def dist_array(waypoints):
@@ -46,29 +36,48 @@ calculates distances between waypoints
     return dist
 
 
-def cost(config,dist):
+def cost(config, dist):
     """
 calculates cost resp. distance for the configuration
     """
-    cost = sum([dist[i][(i+1)%len(config)] for i in config] )
+    cost = sum([dist[i][(i + 1) % len(config)] for i in config])
     return cost
 
 
-def acceptance_probability(config_k, config_k1, tempk):
+def acceptance_probability(config_k, config_k1, tempk, dist):
     """
 Determines probability of accepting the new config
     :param config_k: config at time k
     :param config_k1: config at time k+1
-    :param temp: temp at time k
+    :param tempk: temp at time k
+    :param dist: distance array for used waypoints
     :return p: probability of acceptance
     """
-    delta = cost(config_k1) - cost(config_k)
+    delta = cost(config_k1, dist) - cost(config_k, dist)
     if delta <= 0:
         p = 1
     else:
         p = np.exp(-delta / tempk)
     return p
 
+
+def change_config1(config):
+    """
+randomly changes configuration: e.g.: a--b--c--d--e--f ==> a--e--d--c--b--f
+    arg: old config
+    return: new config
+    """
+
+    return config
+
+
+def change_config2(config):
+    """
+randomly inserts a part of the config somewhere else, e.g. a--b--c--d--e--f ==> a--d--e--b--c--f
+    :param config: old config
+    :return: new config
+    """
+    return config
 
 def move(p):
     """
@@ -109,4 +118,5 @@ def initial_condition(waypoints):
 
 if __name__ == '__main__':
     points, config = initial_condition(random_waypoints())
+
     main()
