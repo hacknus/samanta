@@ -30,11 +30,28 @@ randomly inserts a part of the config somewhere else, e.g. a--b--c--d--e--f ==> 
     return config
 
 
-def cost(config):
+def dist_array(waypoints):
+    """
+calculates distances between waypoints
+    :param waypoints: list of waypoints
+    :return dist_array: n x n array, with dist_array[i][j] = distance between ith and jth waypoint
+    """
+    n = len(waypoints)
+    dist = [
+        [np.sqrt(
+            (waypoints[i].position[0] - waypoints[j].position[0]) ** 2 +
+            (waypoints[i].position[1] - waypoints[j].position[1]) ** 2
+        ) for j in range(n)]
+        for i in range(n)]
+    return dist
+
+
+def cost(config,dist):
     """
 calculates cost resp. distance for the configuration
     """
-    pass
+    cost = sum([dist[i][(i+1)%len(config)] for i in config] )
+    return cost
 
 
 def acceptance_probability(config_k, config_k1, tempk):
@@ -53,8 +70,16 @@ Determines probability of accepting the new config
     return p
 
 
-def decision(p):
-    pass
+def move(p):
+    """
+Decides if to accept the new config
+    :param p: probability
+    :return: boolean, if accepted ==> True, else ==> False
+    """
+    if np.random.rand() < p:
+        return True
+    else:
+        return False
 
 
 def main():
@@ -69,11 +94,14 @@ def random_waypoints(n=10, set_seed=True):
     if set_seed:
         np.random.seed(0)  # to get each time the same random numbers
     points = [Waypoint(np.random.rand(2)) for i in range(n)]
-    return points
+    points_dict = {}
+    for p in points:
+        points_dict[p.id] = p
+    return points_dict
 
 
 def initial_condition(waypoints):
-    return waypoints, np.random.shuffle(waypoints)
+    return waypoints, [i for i in range(len(waypoints))]
 
 
 # --------------------
