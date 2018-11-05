@@ -12,9 +12,6 @@ class Cities:
         Cities.num = self.id
 
 
-
-
-
 def dist_array(cities):
     """
 calculates distances between cities
@@ -30,6 +27,7 @@ maybe np.linalg.norm
         ) for j in range(n)]
         for i in range(n)]
     return dist
+
 
 def swap2cities(config):
     """
@@ -63,6 +61,7 @@ randomly inserts a part of the config somewhere else, e.g. a--b--c--d--e--f ==> 
     """
     return config
 
+
 def cost(config, dist):
     """
 calculates cost resp. distance for the configuration
@@ -86,9 +85,6 @@ Determines probability of accepting the new config
     else:
         p = np.exp(-delta / tempk)
     return p
-
-
-
 
 
 def move(p):
@@ -116,18 +112,18 @@ estimates a good starting temperature
 
 
 # ----------------- initial--------------
-# for nora (travelling salesman)
-def random_waypoints(n=10, set_seed=True):
+
+def random_cities(n=10, set_seed=True):
     if set_seed:
         np.random.seed(0)  # to get each time the same random numbers
     points = [Cities(np.random.rand(2)) for i in range(n)]
     points_dict = {}
     for p in points:
         points_dict[p.id] = p
-    return points_dict
+    return points
 
 
-def initial_condition(cities,beta):
+def initial_condition(cities, beta):
     """
 choose random state, calculate distance matrix, define t_0, beta
     :param cities:
@@ -143,40 +139,41 @@ choose random state, calculate distance matrix, define t_0, beta
 
 # --------------------
 
-def run(config,t_k,dist,beta):
+def run(config, t_k, dist, beta):
     """
-2)create new state s'
-3)compute delta
+-create new state s'
+-compute delta
     decide if move to new stat
         if yes: compute t_k+1 = beta* t_k
-4)repeat step 2, 3, keeping track of best solution until stoping cond
     :param config: current configuration
     :param t_k: current temperatur
     :param dist: distance matrix for used cities
     :param beta: cooling factor
-
     """
     config_accept = False
     while not config_accept:
         new_config = swap2cities(config)
-        p = acceptance_probability(config,new_config,t_k,dist)
+        p = acceptance_probability(config, new_config, t_k, dist)
         if move(p):
-            t_k1 = t_k*beta
+            t_k1 = t_k * beta
             config_accept = True
 
     return new_config, t_k1
+#3)repeat step 1, 2, keeping track of best solution until stoping cond
 
-#Quinten------------------
-n=100
+# Animation------------------
+n = 100
 fig = plt.figure()
-ax = plt.axes(xlim = (0,1), ylim = (0,1))
-line, = ax.plot([], [], animated = True, lw=1)
-points = np.random.rand(n,2)
-ax.scatter(points[:,0], points[:,1], color = 'orange')
+ax = plt.axes(xlim=(0, 1), ylim=(0, 1))
+line, = ax.plot([], [], animated=True, lw=1)
+points = np.random.rand(n, 2)
+ax.scatter(points[:, 0], points[:, 1], color='orange')
+
 
 def init():
     line.set_data([], [])
     return line,
+
 
 def animate(i):
     """"""
@@ -189,20 +186,19 @@ def animate(i):
     line.set_data(xdata, ydata)
     return line,
 
-#ax.scatter(xdata, ydata, s=200, color='black', zorder=1)
-#ax.scatter(xdata, ydata, s=200, color='orange', zorder=1)
-#ax.scatter(xdata, ydata, s=2, color='red', zorder=1)
+
+# ax.scatter(xdata, ydata, s=200, color='black', zorder=1)
+# ax.scatter(xdata, ydata, s=200, color='orange', zorder=1)
+# ax.scatter(xdata, ydata, s=2, color='red', zorder=1)
 
 
-
-ani = animation.FuncAnimation(fig, animate, np.arange(0,20), blit=True, interval=20,
+ani = animation.FuncAnimation(fig, animate, np.arange(0, 20), blit=True, interval=20,
                               repeat=False, init_func=init)
 plt.show()
-#Quinten--------------
-
+# Quinten--------------
 
 
 if __name__ == '__main__':
-    points, config = initial_condition(random_waypoints())
+    points, config = initial_condition(random_cities())
 
-    main()
+    
