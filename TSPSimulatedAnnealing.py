@@ -12,16 +12,7 @@ class Cities:
         Cities.num = self.id
 
 
-def temp_0(dist):
-    """
-estimates a good starting temperature
-    :param dist: distance matrix for used cities
-    :return start temperatur
-    """
-    random_config = [np.random.permutation(np.arange(10)) for i in range(100)]
-    cost_random_config = [cost(c, dist) for c in random_config]
-    t_0 = (max(cost_random_config) - min(cost_random_config)) * 1.1
-    return t_0
+
 
 
 def dist_array(cities):
@@ -39,32 +30,6 @@ maybe np.linalg.norm
         ) for j in range(n)]
         for i in range(n)]
     return dist
-
-
-def cost(config, dist):
-    """
-calculates cost resp. distance for the configuration
-    """
-    cost = sum([dist[i][(i + 1) % len(config)] for i in config])
-    return cost
-
-
-def acceptance_probability(config_k, config_k1, tempk, dist):
-    """
-Determines probability of accepting the new config
-    :param config_k: config at time k
-    :param config_k1: config at time k+1
-    :param tempk: temp at time k
-    :param dist: distance array for used cities
-    :return p: probability of acceptance
-    """
-    delta = cost(config_k1, dist) - cost(config_k, dist)
-    if delta <= 0:
-        p = 1
-    else:
-        p = np.exp(-delta / tempk)
-    return p
-
 
 def swap2cities(config):
     """
@@ -98,6 +63,33 @@ randomly inserts a part of the config somewhere else, e.g. a--b--c--d--e--f ==> 
     """
     return config
 
+def cost(config, dist):
+    """
+calculates cost resp. distance for the configuration
+    """
+    cost = sum([dist[i][(i + 1) % len(config)] for i in config])
+    return cost
+
+
+def acceptance_probability(config_k, config_k1, tempk, dist):
+    """
+Determines probability of accepting the new config
+    :param config_k: config at time k
+    :param config_k1: config at time k+1
+    :param tempk: temp at time k
+    :param dist: distance array for used cities
+    :return p: probability of acceptance
+    """
+    delta = cost(config_k1, dist) - cost(config_k, dist)
+    if delta <= 0:
+        p = 1
+    else:
+        p = np.exp(-delta / tempk)
+    return p
+
+
+
+
 
 def move(p):
     """
@@ -111,10 +103,16 @@ Decides if to accept the new config
         return False
 
 
-def main():
-    t = 0
-    while t < 100:
-        break
+def temp_0(dist):
+    """
+estimates a good starting temperature
+    :param dist: distance matrix for used cities
+    :return start temperatur
+    """
+    random_config = [np.random.permutation(np.arange(10)) for i in range(100)]
+    cost_random_config = [cost(c, dist) for c in random_config]
+    t_0 = (max(cost_random_config) - min(cost_random_config)) * 1.1
+    return t_0
 
 
 # ----------------- initial--------------
@@ -129,14 +127,18 @@ def random_waypoints(n=10, set_seed=True):
     return points_dict
 
 
-def initial_condition(waypoints):
+def initial_condition(cities,beta):
     """
-1)choose random state, define T0, beta
-
-    :param waypoints:
+choose random state, calculate distance matrix, define t_0, beta
+    :param cities:
+    :param beta: cooling factor
     :return:
     """
-    return waypoints, [i for i in range(len(waypoints))]
+    dist = dist_array(cities)
+    t_0 = temp_0(dist)
+    list_id = [city.id for city in cities]
+    start_config = np.random.permutation(list_id)
+    return cities, start_config, dist, beta, t_0
 
 
 # --------------------
@@ -164,7 +166,39 @@ def run(config,t_k,dist,beta):
 
     return new_config, t_k1
 
+#Quinten------------------
+n=100
+fig = plt.figure()
+ax = plt.axes(xlim = (0,1), ylim = (0,1))
+line, = ax.plot([], [], animated = True, lw=1)
+points = np.random.rand(n,2)
+ax.scatter(points[:,0], points[:,1], color = 'orange')
 
+def init():
+    line.set_data([], [])
+    return line,
+
+def animate(i):
+    """"""
+    config = np.arange(n)
+    np.random.shuffle(config)
+    """"""
+
+    xdata = points[config, 0]
+    ydata = points[config, 1]
+    line.set_data(xdata, ydata)
+    return line,
+
+#ax.scatter(xdata, ydata, s=200, color='black', zorder=1)
+#ax.scatter(xdata, ydata, s=200, color='orange', zorder=1)
+#ax.scatter(xdata, ydata, s=2, color='red', zorder=1)
+
+
+
+ani = animation.FuncAnimation(fig, animate, np.arange(0,20), blit=True, interval=20,
+                              repeat=False, init_func=init)
+plt.show()
+#Quinten--------------
 
 
 
