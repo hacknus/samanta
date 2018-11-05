@@ -15,16 +15,16 @@ class ant:
 		self.tabu = []
 		self.last_path = [np.array([np.nan,np.nan]),np.array([np.nan,np.nan])]
 
-	def make_move(self,feromone,waypoints):
+	def make_move(self,feromone,cities):
 		''' 
-		takes feromone and a list of all distances to waypoints as arguments
+		takes feromone and a list of all distances to cities as arguments
 		and then calls probability and decision function in order to make a move
 		'''
 		if not self.alive:						#check if alive
 			return False
-		d = self.calc_dist(waypoints)			#get distance dictionary
-		self.tabu.append(self.position)			#append current position to tabu list
-		probabilities = self.prob(feromone,d)	#get probabilities of each path (to waypoints)
+		d,current_wp = self.calc_dist(cities)#get distance dictionary
+		self.tabu.append(current_wp)			#append current city to tabu list
+		probabilities = self.prob(feromone,d)	#get probabilities of each path (to cities)
 		p = self.decision(probabilities)		#get decision
 		if not self.alive:						#check if alive (decision() could have changed this state)
 			return False
@@ -32,32 +32,35 @@ class ant:
 		self.last_path = [ self.tabu[-1], self.position ]	#set last path
 		return True
 
-	def calc_dist(self,waypoints):
+	def calc_dist(self,cities):
 		'''
-		takes waypoints-list as argument
-		returns a dictionary of all distances to the waypoints
+		takes cities-list as argument
+		returns a dictionary of all distances to the cities
 		in the shape of:
 		d = { 	<object1> : float,
 				<object2> : float,
 				....
 			}
-		where the keys of the dictionary are the waypoint objects
-		(this makes it easier to find out which distance corresponds to which waypoint)
+		where the keys of the dictionary are the city objects
+		(this makes it easier to find out which distance corresponds to which city)
 		'''
 		d = {}
-		for w in waypoints:
-			d[w] = np.linalg.norm(self.position-w.position)
-		return d
+		for w in cities:
+			dist = np.linalg.norm(self.position-w.position)
+			d[w] = dist
+			if dist == 0:
+				current = w
+		return d,current
 
 	def decision(self,probabilities):
 		'''
 		this function takes probabilities as argument but also needs to check if the decision 
-		is not in the tabu list, else it should make another decision, and if no waypoint is left
+		is not in the tabu list, else it should make another decision, and if no city is left
 		i.e. all are elements of the tabu list, then this function should call the kill_ant() function and return False
 		'''
 
 		#quinten
-		
+
 		choice = probabilities[0] #as a test, will always return the first possiblity
 		return choice
 
@@ -70,16 +73,16 @@ class ant:
 		return p
 
 	def kill_ant(self):
-		''' this function kills the ant, it should be called when it has visited all waypoints '''
+		''' this function kills the ant, it should be called when it has visited all cities '''
 		self.alive = False
 
-class waypoint:
+class city:
 	num = 0
-	''' class object of a waypoint, has attribute of position '''
+	''' class object of a city, has attribute of position '''
 	def __init__(self,xy):
 		self.position = np.array(xy)
 		self.id = self.num + 1
-		waypoint.num = self.id
+		self.__class__ = self.id
 
 def delta(k,p,i,j):
 	'''
@@ -116,7 +119,7 @@ def update_feromone(f,ant_list,point_list):
 
 def initial_condition(n=20,set_seed=True):
 	'''
-	takes number of waypoints and a boolean as arguments
+	takes number of cities and a boolean as arguments
 	if boolean is true, then the seed will be fixed such that on every run the 'random' values are the same
 	this makes it easy to compare in the debug phase
 	'''
@@ -129,22 +132,22 @@ def initial_condition(n=20,set_seed=True):
 	ants = []
 	for i in range(n-2):
 		pos = np.random.rand(2)
-		points.append(waypoint(pos))
+		points.append(city(pos))
 		ants.append(ant(pos))
-	A = waypoint(Apos)
-	B = waypoint(Bpos)
+	A = city(Apos)
+	B = city(Bpos)
 	points.append(A)
 	ants.append(ant(Apos))
 	points.append(B)
 	ants.append(ant(Bpos))
 	feromone = np.ones((n,n)) #initialize feromone at t0
-	return np.array(points),np.array(ants),feromone
+	return points,ants,feromone
 
 ########
 
 def draw_all_paths(p,feromone,paths=[]):
 	'''
-	takes waypoints and feromone as arguments, optionally previously drawn paths
+	takes cities and feromone as arguments, optionally previously drawn paths
 	this function then draws all paths according to the feromone level
 	and returns a list of all matplotlib line-objects (so they can be deleted later on)
 	'''
@@ -178,10 +181,14 @@ def run(t,feromone,paths):
 	# after the loop above is finished we remove all dead ants from the ant list
 	# we have to do this after finishing the loop in order to avoid list out of range error!
 	for a in dead_ants:
-		ants.remove(a)
-	# if not ants:
-	# 	#if no more ants are alive, break
-	# 	return False
+		try:
+			ants.remove(a)
+		except:
+			pass
+	if len(ants)==0:
+		#if no more ants are alive, break
+		print("all dead")
+		return False
 	return
 
 def init():
