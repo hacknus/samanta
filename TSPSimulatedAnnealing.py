@@ -11,6 +11,12 @@ class Waypoint:
         self.id = self.num + 1
         Waypoint.num = self.id
 
+
+class Config:
+
+    def __init__(self,n):
+        self.n = n
+
 def temp_0(waypoints):
     """
 estimates a good starting temperature
