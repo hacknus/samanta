@@ -13,6 +13,7 @@ class ant:
 		self.position = np.array(xy)
 		self.alive = True
 		self.tabu = []
+		self.tabu_mask = np.ones((n,n))
 		self.last_path = [np.array([np.nan,np.nan]),np.array([np.nan,np.nan])]
 
 	def make_move(self,feromone,cities):
@@ -22,13 +23,13 @@ class ant:
 		'''
 		if not self.alive:						#check if alive
 			return False
-		d,current_wp = self.calc_dist(cities)#get distance dictionary
-		self.tabu.append(current_wp)			#append current city to tabu list
+		d,current_town = self.calc_dist(cities)	#get distance dictionary
+		self.tabu.append(current_town)			#append current city to tabu list
 		probabilities = self.prob(feromone,d)	#get probabilities of each path (to cities)
-		p = self.decision(probabilities)		#get decision
+		p = self.decision(cities,probabilities)		#get decision
 		if not self.alive:						#check if alive (decision() could have changed this state)
 			return False
-		self.position = p.position 	#make move (update position)
+		self.position = p.position 							#make move (update position)
 		self.last_path = [ self.tabu[-1], self.position ]	#set last path
 		return True
 
@@ -52,7 +53,7 @@ class ant:
 				current = w
 		return d,current
 
-	def decision(self,probabilities):
+	def decision(self,cities,probabilities):
 		'''
 		this function takes probabilities as argument but also needs to check if the decision 
 		is not in the tabu list, else it should make another decision, and if no city is left
@@ -60,16 +61,20 @@ class ant:
 		'''
 
 		#quinten
-
-		choice = probabilities[0] #as a test, will always return the first possiblity
+		choice = np.random.choice(cities,p=probabilities)
+		#choice = probabilities[0] #as a test, will always return the first possiblity
 		return choice
 
 	def prob(self,feromone,d):
+		alpha = 1.
+		beta = 5.
 		''' takes feromone strength and distances (list) to next point as arguments 
 			returns the probabilities (list) of choosing these paths'''
 
 		#this is not done yet, returns just one element for testing purposes
-		p = [list(d.keys())[0]]
+		for i in range(len()):
+			for j in range(len())
+				p[i][j] = feromone[i][j]**alpha/(d[i][j]**beta*np.sum([ feromone[i][k]**alpha/d[i][k]**beta for k in range() ]) )
 		return p
 
 	def kill_ant(self):
