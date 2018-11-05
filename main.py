@@ -82,7 +82,7 @@ class city:
 	def __init__(self,xy):
 		self.position = np.array(xy)
 		self.id = self.num + 1
-		self.__class__ = self.id
+		self.__class__.num = self.id
 
 def delta(k,p,i,j):
 	'''
