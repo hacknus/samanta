@@ -172,7 +172,7 @@ def run(config, t_k, dist, beta):
 # print('dist1=',dist1)
 # -------------------------------------------------------------
 
-cities = random_cities(100)
+cities = random_cities(20)
 cities_dict = {}
 for city in cities:
     cities_dict[city.id] = city
@@ -182,34 +182,46 @@ y_cities = [c.position[1] for c in cities]
 
 dist = dist_array(cities)
 t_0 = temp_0(dist)
+t_min = 1e-6
 list_id = [city.id for city in cities]
 start_config = np.random.permutation(list_id)
 beta = 0.9995
 
-
-accepted_configs = [start_config]
-best_config = start_config
-best_cost = cost(start_config, dist)
-t_min = 1e-6
-t = t_0
-config = start_config
-
-counter = 0
-while t > t_min:
-    counter += 1
-    config, t = run(config, t, dist, beta)
-    accepted_configs.append(config)
-
-    if cost(config, dist) < cost(best_config, dist):
-        best_config = config
-        best_cost = cost(config, dist)
-
-    if counter % 50000 == 0:
-        if accepted_configs[-1].all() == best_config.all():
-            break
-        counter = 0
-
 new_config, tk1 = run(start_config, t_0, dist, beta)
+
+
+def simulated_annealing(start_config, dist, t_0, t_min):
+    accepted_configs = [start_config]
+    accepted_temps = [t_0]
+    best_config = start_config
+    best_cost = cost(start_config, dist)
+
+    t = t_0
+    config = start_config
+
+    counter = 0
+    while t > t_min:
+        counter += 1
+        config, t = run(config, t, dist, beta)
+        accepted_configs.append(config)
+        accepted_temps.append(t)
+
+        if cost(config, dist) < best_cost:
+            best_config = config
+            best_cost = cost(config, dist)
+
+        if counter % 50000 == 0:
+            if accepted_configs[-1].all() == best_config.all():
+                break
+            counter = 0
+
+    return best_config, best_cost, accepted_configs, accepted_temps
+
+
+
+best_config, best_cost, accepted_configs, accepted_temps = simulated_annealing(start_config,dist,t_0,t_min)
+
+
 plt.figure()
 fig, ax = plt.subplots(1, 3)
 for i in range(3):
