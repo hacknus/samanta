@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import animation
 
 
 class Cities:
@@ -173,16 +174,16 @@ def run(config, t_k, dist, beta):
 # -------------------------------------------------------------
 
 cities = random_cities(20)
-cities_dict = {}
-for city in cities:
-    cities_dict[city.id] = city
+# cities_dict = {}
+# for city in cities:
+#     cities_dict[city.id] = city
 
 x_cities = [c.position[0] for c in cities]
 y_cities = [c.position[1] for c in cities]
 
 dist = dist_array(cities)
 t_0 = temp_0(dist)
-t_min = 1e-6
+t_min = 1e-8
 list_id = [city.id for city in cities]
 start_config = np.random.permutation(list_id)
 beta = 0.9995
@@ -213,79 +214,96 @@ def simulated_annealing(start_config, dist, t_0, t_min):
         if counter % 50000 == 0:
             if accepted_configs[-1].all() == best_config.all():
                 break
-            counter = 0
+
 
     return best_config, best_cost, accepted_configs, accepted_temps
 
 
 
-best_config, best_cost, accepted_configs, accepted_temps = simulated_annealing(start_config,dist,t_0,t_min)
-
-
-plt.figure()
-fig, ax = plt.subplots(1, 3)
-for i in range(3):
-    ax[i].scatter(x_cities, y_cities)
-
-x_start_config = [cities_dict[id].position[0] for id in start_config]
-x_start_config.append(x_start_config[0])
-y_start_config = [cities_dict[id].position[1] for id in start_config]
-y_start_config.append(y_start_config[0])
-
-x_new_config = [cities_dict[id].position[0] for id in new_config]
-x_new_config.append(x_new_config[0])
-y_new_config = [cities_dict[id].position[1] for id in new_config]
-y_new_config.append(y_new_config[0])
-
-x_best_config = [cities_dict[id].position[0] for id in best_config]
-x_best_config.append(x_best_config[0])
-y_best_config = [cities_dict[id].position[1] for id in best_config]
-y_best_config.append(y_best_config[0])
-
-ax[0].plot(x_start_config, y_start_config)
-ax[1].plot(x_new_config, y_new_config)
-ax[2].plot(x_best_config, y_best_config)
-print(len(accepted_configs))
-plt.show()
-#
-# #3)repeat step 1, 2, keeping track of best solution until stoping cond
-#
-# # Animation------------------
-# n = 100
-# fig = plt.figure()
-# ax = plt.axes(xlim=(0, 1), ylim=(0, 1))
-# line, = ax.plot([], [], animated=True, lw=1)
-# points = np.random.rand(n, 2)
-# ax.scatter(points[:, 0], points[:, 1], color='orange')
+# best_config, best_cost, accepted_configs, accepted_temps = simulated_annealing(start_config,dist,t_0,t_min)
 #
 #
-# def init():
-#     line.set_data([], [])
-#     return line,
+# plt.figure()
+# fig, ax = plt.subplots(1, 3)
+# for i in range(3):
+#     ax[i].scatter(x_cities, y_cities)
 #
+# x_start_config = [cities_dict[id].position[0] for id in start_config]
+# x_start_config.append(x_start_config[0])
+# y_start_config = [cities_dict[id].position[1] for id in start_config]
+# y_start_config.append(y_start_config[0])
 #
-# def animate(i):
-#     """"""
-#     config = np.arange(n)
-#     np.random.shuffle(config)
-#     """"""
+# x_new_config = [cities_dict[id].position[0] for id in new_config]
+# x_new_config.append(x_new_config[0])
+# y_new_config = [cities_dict[id].position[1] for id in new_config]
+# y_new_config.append(y_new_config[0])
 #
-#     xdata = points[config, 0]
-#     ydata = points[config, 1]
-#     line.set_data(xdata, ydata)
-#     return line,
+# x_best_config = [cities_dict[id].position[0] for id in best_config]
+# x_best_config.append(x_best_config[0])
+# y_best_config = [cities_dict[id].position[1] for id in best_config]
+# y_best_config.append(y_best_config[0])
 #
-#
-# # ax.scatter(xdata, ydata, s=200, color='black', zorder=1)
-# # ax.scatter(xdata, ydata, s=200, color='orange', zorder=1)
-# # ax.scatter(xdata, ydata, s=2, color='red', zorder=1)
-#
-#
-# ani = animation.FuncAnimation(fig, animate, np.arange(0, 20), blit=True, interval=20,
-#                               repeat=False, init_func=init)
+# ax[0].plot(x_start_config, y_start_config)
+# ax[1].plot(x_new_config, y_new_config)
+# ax[2].plot(x_best_config, y_best_config)
+# print(len(accepted_configs))
 # plt.show()
-# # Quinten--------------
-#
+
+# Animation------------------
+n = 100
+fig = plt.figure()
+ax = plt.axes(xlim=(0, 1), ylim=(0, 1))
+line, = ax.plot([], [], animated=True, lw=1)
+points = np.array([[x_cities[i], y_cities[i]] for i in range(len(cities))])
+ax.scatter(points[:, 0], points[:, 1], color='orange')
+
+
+def init():
+    line.set_data([], [])
+    accepted_configs = [start_config]
+    accepted_temps = [t_0]
+    best_config = start_config
+    best_cost = cost(start_config, dist)
+
+    t = t_0
+    config = start_config
+
+    counter = 0
+    return line,
+
+
+def animate(t):
+    counter += 1
+    config, t = run(config, t, dist, beta)
+    accepted_configs.append(config)
+    accepted_temps.append(t)
+
+    if cost(config, dist) < best_cost:
+        best_config = config
+        best_cost = cost(config, dist)
+
+    # if counter % 50000 == 0:
+    #     if accepted_configs[-1].all() == best_config.all():
+    #         exit()
+    print('hello')
+    xdata = points[config, 0]
+    xdata.append(points[config[0],0])
+    ydata = points[config, 1]
+    ydata.append(points[config[0], 1])
+    line.set_data(xdata, ydata)
+    return line,
+
+
+# ax.scatter(xdata, ydata, s=200, color='black', zorder=1)
+# ax.scatter(xdata, ydata, s=200, color='orange', zorder=1)
+# ax.scatter(xdata, ydata, s=2, color='red', zorder=1)
+
+
+ani = animation.FuncAnimation(fig, animate, np.arange(0, 1000), blit=True, interval=20,
+                              repeat=False, init_func=init)
+plt.show()
+# Quinten--------------
+
 #
 # if __name__ == '__main__':
 #     points, config = initial_condition(random_cities())
