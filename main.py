@@ -2,231 +2,256 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-
-rho = 0.99  #evaporation coefficient
-Q = 1		#constant quantity
-
-
 class ant:
-	''' ant object, has attributes of position'''
-	def __init__(self,xy):
-		self.position = np.array(xy)
-		self.alive = True
-		self.tabu = []
-		self.tabu_mask = np.ones((n,n))
-		self.last_path = [np.array([np.nan,np.nan]),np.array([np.nan,np.nan])]
+	''' ant object'''
+	def __init__(self,town,n,i):
+		self.position = town
+		self.n = n
+		self.tabu_mask = np.ones(n)
+		self.last_path = [town,town]
+		self.tabu_mask[i] = 0		
 
-	def make_move(self,feromone,cities):
+	def make_move(self,paths,cities):
 		''' 
-		takes feromone and a list of all distances to cities as arguments
-		and then calls probability and decision function in order to make a move
+		takes path matrix and city list as arguments and makes the move (according to probability):
+			- setting new position
+			- setting last path
+			- setting last town to 0 in tabu list
 		'''
-		if not self.alive:						#check if alive
-			return False
-		d,current_town = self.calc_dist(cities)	#get distance dictionary
-		self.tabu.append(current_town)			#append current city to tabu list
-		probabilities = self.prob(feromone,d)	#get probabilities of each path (to cities)
-		p = self.decision(cities,probabilities)		#get decision
-		if not self.alive:						#check if alive (decision() could have changed this state)
-			return False
-		self.position = p.position 							#make move (update position)
-		self.last_path = [ self.tabu[-1], self.position ]	#set last path
-		return True
+		probabilities = self.prob(paths)					#get probabilities of each path (to cities)
+		probabilities = probabilities[self.position.i]		#only look at the probabilities corresponding to this ant/town (from matrix to list)
+		town,i = self.decision(probabilities,cities)		#get decision
+		self.position = town								#make move (update position)
+		self.last_path = [self.last_path[1],town]			#set last path
+		self.tabu_mask[i] = 0
 
-	def calc_dist(self,cities):
+	def decision(self,probabilities,cities):
 		'''
-		takes cities-list as argument
-		returns a dictionary of all distances to the cities
-		in the shape of:
-		d = { 	<object1> : float,
-				<object2> : float,
-				....
-			}
-		where the keys of the dictionary are the city objects
-		(this makes it easier to find out which distance corresponds to which city)
-		'''
-		d = {}
-		for w in cities:
-			dist = np.linalg.norm(self.position-w.position)
-			d[w] = dist
-			if dist == 0:
-				current = w
-		return d,current
-
-	def decision(self,cities,probabilities):
-		'''
-		this function takes probabilities as argument but also needs to check if the decision 
-		is not in the tabu list, else it should make another decision, and if no city is left
-		i.e. all are elements of the tabu list, then this function should call the kill_ant() function and return False
+		this function takes a probability list as weights and chooses from the cities list, it returns the chosen town and the index
 		'''
 
-		#quinten
-		choice = np.random.choice(cities,p=probabilities)
-		#choice = probabilities[0] #as a test, will always return the first possiblity
-		return choice
+		town = np.random.choice(cities,p=probabilities)
+		i = cities.index(town)
+		return town,i
 
-	def prob(self,feromone,d):
+	def prob(self,paths):
+		''' 
+		takes path matrix as input and calculates probability matrix
+		'''
 		alpha = 1.
-		beta = 5.
-		''' takes feromone strength and distances (list) to next point as arguments 
-			returns the probabilities (list) of choosing these paths'''
-
-		#this is not done yet, returns just one element for testing purposes
-		for i in range(len()):
-			for j in range(len())
-				p[i][j] = feromone[i][j]**alpha/(d[i][j]**beta*np.sum([ feromone[i][k]**alpha/d[i][k]**beta for k in range() ]) )
+		beta = -5.
+		n = self.n
+		p = [[ 0  for i in range(n)] for j in range(n)]
+		allowed = np.arange(n)[self.tabu_mask != 0]
+		for i in range(n):
+			for j in range(n):
+				if i == j or self.tabu_mask[j] == 0:
+					p[i][j] = 0
+				else:
+					p[i][j] = paths[i][j].feromone**alpha * paths[i][j].distance**beta / np.sum([paths[i][k].feromone**alpha * paths[i][k].distance**beta for k in allowed if i!= k])
 		return p
 
-	def kill_ant(self):
-		''' this function kills the ant, it should be called when it has visited all cities '''
-		self.alive = False
+
+class Path:
+	''' Path object '''
+	def __init__(self,i,j):
+		self.i = i
+		self.j = j
+		self.feromone = 0.5 #initial feromone
+		self.distance = 1
+
+	def set_dist(self,a,b):
+		''' sets path distance '''
+		self.distance = np.linalg.norm(a.position-b.position)
+
+	def __repr__(self):
+		''' for debugging '''
+		return str((self.distance,self.feromone))
 
 class city:
 	num = 0
-	''' class object of a city, has attribute of position '''
-	def __init__(self,xy):
+	''' class object of a city, has attribute of position (for plotting) '''
+	def __init__(self,xy,i):
+		self.i = i
 		self.position = np.array(xy)
 		self.id = self.num + 1
 		self.__class__.num = self.id
 
-def delta(k,p,i,j):
-	'''
-	takes k-th ant, point list and indices i and j as arguments
-	and returns value of 
-	delta tau
-	'''
-	if ( (k.last_path[0] == p[i].position).all() and (k.last_path[1] == p[j].position).all() ) or ( (k.last_path[0] == p[j].position).all() and (k.last_path[1] == p[i].position).all() ):
-		return Q/np.linalg.norm(k.last_path[0]-k.last_path[1])
-	else:
-		return 0
+
+class Algorithm:
+	''' total algorithm class, easy to import '''
+	def __init__(self,n,rho=0.99,Q=1):
+		self.n = n
+		self.city_list = []		
+		self.ant_list = []		
+		self.paths = []
+		self.fig = None
+		self.ax = None	
+		self.coordinates_cities = []
+		self.coordinates_ants = []
+		self.rho = rho  		#evaporation coefficient
+		self.Q = Q				#constant quantity
+
+	def delta(self,i,j):
+		'''
+		takes indices i and j as arguments
+		and returns value of 
+		delta tau (sum)
+		'''
+		s = 0
+		for k in self.ant_list:
+			if (k.last_path[0].i == i and k.last_path[1].i == j) or (k.last_path[0].i == j and k.last_path[1].i == i):
+				s+= self.Q/self.paths[i][j].distance
+		return s
 
 
-def update_feromone(f,ant_list,point_list):
-	''' takes feromone matrix, ant list and point list as arguments and returns the new feromone matrix'''
-	#linus (1. method ant quantity)
-	#could be vectorized and split in half (since tau is traceless and symmetrical)
+	def update_feromone(self):
+		'''
+		updates the feromone attributes of the path matrix elements
+		'''
+		for i in range(len(self.paths)):
+			for j in range(len(self.paths)):
+				if i == j:
+					self.paths[i][j].feromone = 0
+				else:
+					self.paths[i][j].feromone = self.paths[i][j].feromone*self.rho + self.delta(i,j)
 
 
-	f_new = np.copy(f)
-	for i in range(len(f)):
-		for j in range(len(f)):
-			s = 0
-			for k in ant_list:
-				if i==j:
-					continue
-				s += f[i][j]*rho + delta(k,point_list,i,j)
-			f_new[i][j] = s
-	return f_new
+	def initial_condition(self,set_seed=True):
+		'''
+		takes number of cities and a boolean as arguments
+		if boolean is true, then the seed will be fixed such that on every run the 'random' values are the same
+		this makes it easy to compare in the debug phase
+		'''
+		Apos = [0,0]	# city A
+		Bpos = [1,1]	# city B
+
+		n = self.n
+
+		if set_seed:
+			np.random.seed(0)			#to get each time the same random numbers
+
+		for i in range(1,n-1):
+			pos = np.random.rand(2)
+			self.city_list.append(city(pos,i))
+			self.ant_list.append(ant(self.city_list[i-1],n,i-1))
+		A = city(Apos,0)
+		B = city(Bpos,n-1)
+		self.city_list.append(A)
+		self.ant_list.append(ant(A,n,0))
+		self.city_list.append(B)
+		self.ant_list.append(ant(B,n,n-1))
+		self.paths = [[ None for i in range(n)] for j in range(n)]
+		for i in range(n):
+			for j in range(n):
+				self.paths[i][j] = Path(i,j)
+				self.paths[i][j].set_dist(self.city_list[i],self.city_list[j])
+
+	def init_plot(self):
+		'''
+		initializes plot and plots the cities and ants as scatterplot
+		'''
+		self.fig, self.ax = plt.subplots()
+		self.coordinates_cities = np.array([ [p.position[0],p.position[1]] for p in self.city_list])
+		self.coordinates_ants = np.array([ [a.position.position[0],a.position.position[1]] for a in self.ant_list])
+		self.ax.scatter(self.coordinates_cities[:-2,0],self.coordinates_cities[:-2,1],s=200,color='black',zorder=1)
+		self.ax.scatter(self.coordinates_cities[-2:,0],self.coordinates_cities[-2:,1],s=200,color='orange',zorder=1)	# cities A and B
+		self.ax.scatter(self.coordinates_ants[:,0],self.coordinates_ants[:,1],s=2,color='red',zorder=1)					# all ants
 
 
-######## initial
-#for nora (travelling salesman)
+	def draw_all_paths(self,t):
+		'''
+		for animating, not really working yet
+		'''
+		p = self.coordinates_cities
+		x = []
+		y = []
+		all_widths = [[ 0 for i in range(len(p))] for j in range(len(p))]
+		for i in range(len(p)):
+			for j in range(len(p)):
+				if i!=j:
+					width = np.log(self.paths[i][j].feromone)  #adjusts with according to feromone strength
+					all_widths[i][j] = width
+		for i in range(len(p)):
+			for j in range(len(p)):
+				if i!=j:
+					width = all_widths[i][j] - 1.01*np.sum(np.array(all_widths))/len(p)**2 #adjusts with according to feromone strength
+					color = self.map(width)
+					#print(np.sum(np.array(all_widths))/len(p)**2,width)
+					if t % 1 == 0:
+						self.ax.plot( [p[i][0], p[j][0]] ,[p[i][1], p[j][1]] ,color='{}'.format('black'),linewidth=1.5*width,zorder=-2)
+					#print([p[i][0], p[j][0]], [p[i][1], p[j][1]])
+					#paths[i][j].set_data( [p[i][0], p[j][0]], [p[i][1], p[j][1]] )
+		return
 
-def initial_condition(n=20,set_seed=True):
-	'''
-	takes number of cities and a boolean as arguments
-	if boolean is true, then the seed will be fixed such that on every run the 'random' values are the same
-	this makes it easy to compare in the debug phase
-	'''
-	Apos = [0,0]	# point A
-	Bpos = [1,1]	# point B
+	def map(self,w):
+		''' maps the width (feromone) to color '''
+		return np.exp(-w)
 
-	if set_seed:
-		np.random.seed(0)			#to get each time the same random numbers
-	points = []
-	ants = []
-	for i in range(n-2):
-		pos = np.random.rand(2)
-		points.append(city(pos))
-		ants.append(ant(pos))
-	A = city(Apos)
-	B = city(Bpos)
-	points.append(A)
-	ants.append(ant(Apos))
-	points.append(B)
-	ants.append(ant(Bpos))
-	feromone = np.ones((n,n)) #initialize feromone at t0
-	return points,ants,feromone
 
-########
+	def animate(self,t):
+		'''
+		for animating, not really working yet
+		'''
+		self.update_feromone()
+		self.draw_all_paths(t)
+		for a in self.ant_list:
+			#let all ants make a move
+			a.make_move(self.paths,self.city_list)
+			if np.count_nonzero(a.tabu_mask)==0:
+				plt.savefig("ant.png")
+				raise Exception("end of run")
 
-def draw_all_paths(p,feromone,paths=[]):
-	'''
-	takes cities and feromone as arguments, optionally previously drawn paths
-	this function then draws all paths according to the feromone level
-	and returns a list of all matplotlib line-objects (so they can be deleted later on)
-	'''
-	x = []
-	y = []
-	if paths:
-		for line in paths:
-			#clear all previously drawn paths (saves memory)
-			try:
-				line.pop(0).remove()
-			except:
-				pass
-	for i in range(len(p)):
-		for j in range(len(p)):
-			if i!=j:
-				width = feromone[i][j]/10 #adjusts with according to feromone strength
-				print(width)
-				paths.append(ax.plot( [p[i][0], p[j][0]] ,[p[i][1], p[j][1]] ,color='blue',linewidth=width,zorder=-2))
-				#print([p[i][0], p[j][0]], [p[i][1], p[j][1]])
-				#paths[i][j].set_data( [p[i][0], p[j][0]], [p[i][1], p[j][1]] )
-	return paths,
+	def init(self):
+		'''
+		for animating, not really working yet
+		'''
+		self.ax.set_xlim(0,1)
+		self.ax.set_ylim(0,1)
 
-def run(t,feromone,paths):
-	feromone = update_feromone(feromone,ants,points)
-	paths = draw_all_paths(coordinates_points,feromone,paths)
-	for a in ants:
-		#let all ants make a move
-		if not a.make_move(feromone,points):
-			# if the ant is dead, add it to the list
-			dead_ants.append(a)
-	# after the loop above is finished we remove all dead ants from the ant list
-	# we have to do this after finishing the loop in order to avoid list out of range error!
-	for a in dead_ants:
-		try:
-			ants.remove(a)
-		except:
-			pass
-	if len(ants)==0:
-		#if no more ants are alive, break
-		print("all dead")
-		return False
-	return
+	def run(self):
+		'''
+		for animating, not really working yet
+		'''
+		ani = animation.FuncAnimation(self.fig, self.animate, np.arange(1, 1000),blit=False, interval=10,repeat=False, init_func=self.init)
+		plt.show()
 
-def init():
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0,1)
-    return paths,
+	def run_again(self):
+		'''
+		creates new ants (thus new empty tabu lists)
+		but lets the feromones unchanged
+		'''
+		self.ant_list = []
+		for i in range(0,self.n):
+			self.ant_list.append(ant(self.city_list[i],n,i))
+
+	def run_without_anim(self,counter):
+		'''
+		lets the ants make their moves until tabu list is filled, then saves the image and returns
+		'''
+		while True:
+			p = self.coordinates_cities
+			self.update_feromone()
+			self.draw_all_paths(counter)
+			for a in self.ant_list:
+				#let all ants make a move
+				if np.count_nonzero(a.tabu_mask)==0:
+					plt.savefig("run{}.png".format(counter))
+					plt.cla()
+					return
+				a.make_move(self.paths,self.city_list)
+
 
 
 if __name__ == '__main__':
-	fig, ax = plt.subplots()
-	xdata, ydata = [], []
-	points,ants,feromone = initial_condition()
-	paths = [ [ '' for i in range(len(points))] for j in range(len(points)) ]
 
-	for i in range(len(points)):
-		for j in range(len(points)):
-			ln, = ax.plot([], [], color='blue',linewidth=1,zorder=-2, animated=True)
-			paths[i][j] = ln
-	dead_ants = []
+	n = 10
+	cycle = Algorithm(n)
+	cycle.initial_condition()
+	cycle.init_plot()
+	for i in range(100):
+		cycle.run_without_anim(i)
+		cycle.init_plot()
+		cycle.run_again()
+		print(i)
 
-	#get list of coordinates for plotting purposes
-	coordinates_points = np.array([ [p.position[0],p.position[1]] for p in points])
-	coordinates_ants = np.array([ [a.position[0],a.position[1]] for a in ants])
-
-
-	#paths = draw_all_paths(coordinates_points,feromone,paths)
-	
-	ax.scatter(coordinates_points[:-2,0],coordinates_points[:-2,1],s=200,color='black',zorder=1)
-	ax.scatter(coordinates_points[-2:,0],coordinates_points[-2:,1],s=200,color='orange',zorder=1)	# points A and B
-	ax.scatter(coordinates_ants[:,0],coordinates_ants[:,1],s=2,color='red',zorder=1)				# all ants
-
-
-	#begin main loop  ---- animation func is not implemented yet
-
-	ani = animation.FuncAnimation(fig, run, np.arange(1, 20), fargs=(feromone,paths),blit=False, interval=10,repeat=False, init_func=init)
-	plt.show()
