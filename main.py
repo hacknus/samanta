@@ -6,6 +6,7 @@ class ant:
 	''' ant object'''
 	def __init__(self,town,n,i):
 		self.position = town
+		self.i = i
 		self.n = n
 		self.tabu_mask = np.ones(n)
 		self.last_path = [town,town]
@@ -19,20 +20,18 @@ class ant:
 			- setting last town to 0 in tabu list
 		'''
 		probabilities = self.prob(paths)					#get probabilities of each path (to cities)
-		probabilities = probabilities[self.position.i]		#only look at the probabilities corresponding to this ant/town (from matrix to list)
-		town,i = self.decision(probabilities,cities)		#get decision
+		probabilities = probabilities[self.i]				#only look at the probabilities corresponding to this ant/town (from matrix to list)
+		town = self.decision(probabilities,cities)			#get decision
 		self.position = town								#make move (update position)
+		self.tabu_mask[cities.index(self.last_path[1])] = 0
 		self.last_path = [self.last_path[1],town]			#set last path
-		self.tabu_mask[i] = 0
 
 	def decision(self,probabilities,cities):
 		'''
-		this function takes a probability list as weights and chooses from the cities list, it returns the chosen town and the index
+		this function takes a probability list as weights and chooses from the cities list, it returns the chosen town
 		'''
-
 		town = np.random.choice(cities,p=probabilities)
-		i = cities.index(town)
-		return town,i
+		return town
 
 	def prob(self,paths):
 		''' 
@@ -213,7 +212,7 @@ class Algorithm:
 		'''
 		for animating, not really working yet
 		'''
-		ani = animation.FuncAnimation(self.fig, self.animate, np.arange(1, 1000),blit=False, interval=10,repeat=False, init_func=self.init)
+		ani = animation.FuncAnimation(self.fig, self.animate, np.arange(0, self.n+1),blit=False, interval=10,repeat=False, init_func=self.init)
 		plt.show()
 
 	def run_again(self):
@@ -235,7 +234,7 @@ class Algorithm:
 			self.draw_all_paths(counter)
 			for a in self.ant_list:
 				#let all ants make a move
-				if np.count_nonzero(a.tabu_mask)==0:
+				if np.count_nonzero(a.tabu_mask) == 0:
 					plt.savefig("run{}.png".format(counter))
 					plt.cla()
 					return
