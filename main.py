@@ -10,6 +10,7 @@ class ant:
 		self.n = n
 		self.tabu_mask = np.ones(n)
 		self.last_path = [town,town]
+		self.path_length_history = []
 		self.tabu_mask[i] = 0		
 
 	def make_move(self,paths,cities):
@@ -22,9 +23,12 @@ class ant:
 		probabilities = self.prob(paths)					#get probabilities of each path (to cities)
 		probabilities = probabilities[self.i]				#only look at the probabilities corresponding to this ant/town (from matrix to list)
 		town = self.decision(probabilities,cities)			#get decision
-		self.position = town								#make move (update position)
-		self.tabu_mask[cities.index(self.last_path[1])] = 0
+		self.position = town 								#make move (update position)
+		town_index = cities.index(self.last_path[1])
+		#print(town_index,self.last_path[1].i)
+		self.tabu_mask[town_index] = 0						#add last city to tabu mask
 		self.last_path = [self.last_path[1],town]			#set last path
+		self.path_length_history.append(paths[self.i][town_index].distance)
 
 	def decision(self,probabilities,cities):
 		'''
@@ -37,10 +41,13 @@ class ant:
 		''' 
 		takes path matrix as input and calculates probability matrix
 		'''
+
+		#vectorize?
+
 		alpha = 1.
 		beta = -5.
 		n = self.n
-		p = [[ 0  for i in range(n)] for j in range(n)]
+		p = np.zeros((n,n))
 		allowed = np.arange(n)[self.tabu_mask != 0]
 		for i in range(n):
 			for j in range(n):
@@ -49,6 +56,10 @@ class ant:
 				else:
 					p[i][j] = paths[i][j].feromone**alpha * paths[i][j].distance**beta / np.sum([paths[i][k].feromone**alpha * paths[i][k].distance**beta for k in allowed if i!= k])
 		return p
+
+	def __repr__(self):
+		''' for debugging '''
+		return str(self.position)		
 
 
 class Path:
@@ -67,14 +78,16 @@ class Path:
 		''' for debugging '''
 		return str((self.distance,self.feromone))
 
+
 class city:
-	num = 0
 	''' class object of a city, has attribute of position (for plotting) '''
 	def __init__(self,xy,i):
 		self.i = i
 		self.position = np.array(xy)
-		self.id = self.num + 1
-		self.__class__.num = self.id
+
+	# def __repr__(self):
+	# 	''' for debugging '''
+	# 	return str(self.i)		
 
 
 class Algorithm:
@@ -90,6 +103,7 @@ class Algorithm:
 		self.coordinates_ants = []
 		self.rho = rho  		#evaporation coefficient
 		self.Q = Q				#constant quantity
+		self.performance = []
 
 	def delta(self,i,j):
 		'''
@@ -108,6 +122,8 @@ class Algorithm:
 		'''
 		updates the feromone attributes of the path matrix elements
 		'''
+
+		#vectorize?
 		for i in range(len(self.paths)):
 			for j in range(len(self.paths)):
 				if i == j:
@@ -140,7 +156,7 @@ class Algorithm:
 		self.ant_list.append(ant(A,n,0))
 		self.city_list.append(B)
 		self.ant_list.append(ant(B,n,n-1))
-		self.paths = [[ None for i in range(n)] for j in range(n)]
+		self.paths = [[ None for i in range(n)] for j in range(n) ]
 		for i in range(n):
 			for j in range(n):
 				self.paths[i][j] = Path(i,j)
@@ -165,7 +181,7 @@ class Algorithm:
 		p = self.coordinates_cities
 		x = []
 		y = []
-		all_widths = [[ 0 for i in range(len(p))] for j in range(len(p))]
+		all_widths = np.zeros((n,n))
 		for i in range(len(p)):
 			for j in range(len(p)):
 				if i!=j:
@@ -174,8 +190,8 @@ class Algorithm:
 		for i in range(len(p)):
 			for j in range(len(p)):
 				if i!=j:
-					width = all_widths[i][j] - 1.01*np.sum(np.array(all_widths))/len(p)**2 #adjusts with according to feromone strength
-					color = self.map(width)
+					width = all_widths[i][j]/np.sum(np.array(all_widths))/len(p)**2 #- 1.01*np.sum(np.array(all_widths))/len(p)**2 #adjusts with according to feromone strength
+					color = self.map(width/np.sum(np.array(all_widths))/len(p)**2)
 					#print(np.sum(np.array(all_widths))/len(p)**2,width)
 					if t % 1 == 0:
 						self.ax.plot( [p[i][0], p[j][0]] ,[p[i][1], p[j][1]] ,color='{}'.format('black'),linewidth=1.5*width,zorder=-2)
@@ -215,7 +231,15 @@ class Algorithm:
 		ani = animation.FuncAnimation(self.fig, self.animate, np.arange(0, self.n+1),blit=False, interval=10,repeat=False, init_func=self.init)
 		plt.show()
 
-	def run_again(self):
+
+	def shortest_path(self,counter):
+		sp = []
+		for a in self.ant_list:
+			sp.append(sum(a.path_length_history))
+		print(min(sp))
+		self.performance.append(min(sp))
+
+	def reload_ants(self):
 		'''
 		creates new ants (thus new empty tabu lists)
 		but lets the feromones unchanged
@@ -229,7 +253,6 @@ class Algorithm:
 		lets the ants make their moves until tabu list is filled, then saves the image and returns
 		'''
 		while True:
-			p = self.coordinates_cities
 			self.update_feromone()
 			self.draw_all_paths(counter)
 			for a in self.ant_list:
@@ -248,9 +271,13 @@ if __name__ == '__main__':
 	cycle = Algorithm(n)
 	cycle.initial_condition()
 	cycle.init_plot()
-	for i in range(100):
+	for i in range(200):
 		cycle.run_without_anim(i)
 		cycle.init_plot()
-		cycle.run_again()
+		cycle.shortest_path(i)
+		cycle.reload_ants()
 		print(i)
+	plt.cla()
+	plt.plot(range(200),cycle.performance)
+	plt.show()
 
