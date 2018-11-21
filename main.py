@@ -248,6 +248,7 @@ class Algorithm:
 		self.ant_list = []
 		for i in range(0,self.n):
 			self.ant_list.append(ant(self.city_list[i],n,i))
+			
 
 	def run_without_anim(self,counter):
 		'''
