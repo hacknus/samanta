@@ -11,6 +11,7 @@ class ant:
 		self.tabu_mask = np.ones(n)
 		self.last_path = [town,town]
 		self.path_length_history = []
+		self.history = [town]
 		self.tabu_mask[i] = 0		
 
 	def make_move(self,paths,cities):
@@ -24,12 +25,12 @@ class ant:
 		probabilities = probabilities[self.i]				#only look at the probabilities corresponding to this ant/town (from matrix to list)
 		town = self.decision(probabilities,cities)			#get decision
 		self.position = town 								#make move (update position)
-		town_index = self.last_path[1].i
+		town_index = cities.index(self.last_path[1])
+		#print(town_index,self.last_path[1].i)
 		self.tabu_mask[town_index] = 0						#add last city to tabu mask
 		self.last_path = [self.last_path[1],town]			#set last path
 		self.path_length_history.append(paths[self.i][town_index].distance)
-		self.i = town_index
-
+		self.history.append(town)
 
 	def decision(self,probabilities,cities):
 		'''
@@ -88,7 +89,7 @@ class city:
 
 	# def __repr__(self):
 	# 	''' for debugging '''
-	# 	return str(self.i)
+	# 	return str(self.i)		
 
 
 class Algorithm:
@@ -147,17 +148,17 @@ class Algorithm:
 		if set_seed:
 			np.random.seed(0)			#to get each time the same random numbers
 
-		for i in range(0,n):
+		for i in range(1,n-1):
 			pos = np.random.rand(2)
 			self.city_list.append(city(pos,i))
-			self.ant_list.append(ant(self.city_list[i],n,i-1))
+			self.ant_list.append(ant(self.city_list[i-1],n,i-1))
 		A = city(Apos,0)
 		B = city(Bpos,n-1)
-		self.city_list[0] = A
-		self.ant_list[0] = ant(A,n,-1)
-		self.city_list[-1] = B
-		self.ant_list[-1] = ant(B,n,n-1)
-		self.paths = [[ None for i in range(n)] for j in range(n)]
+		self.city_list.append(A)
+		self.ant_list.append(ant(A,n,0))
+		self.city_list.append(B)
+		self.ant_list.append(ant(B,n,n-1))
+		self.paths = [[ None for i in range(n)] for j in range(n) ]
 		for i in range(n):
 			for j in range(n):
 				self.paths[i][j] = Path(i,j)
@@ -191,7 +192,7 @@ class Algorithm:
 		for i in range(len(p)):
 			for j in range(len(p)):
 				if i!=j:
-					width = all_widths[i][j] - 1.01*np.sum(np.array(all_widths))/len(p)**2 #adjusts with according to feromone strength
+					width = all_widths[i][j]/np.sum(np.array(all_widths))/len(p)**2 #- 1.01*np.sum(np.array(all_widths))/len(p)**2 #adjusts with according to feromone strength
 					color = self.map(width/np.sum(np.array(all_widths))/len(p)**2)
 					#print(np.sum(np.array(all_widths))/len(p)**2,width)
 					if t % 1 == 0:
@@ -238,6 +239,9 @@ class Algorithm:
 		for a in self.ant_list:
 			sp.append(sum(a.path_length_history))
 		print(min(sp))
+		i = sp.index(min(sp))
+		shortest = np.array([town.position for town in self.ant_list[i].history])
+		plt.plot(shortest[:,0],shortest[:,1],color='red')
 		self.performance.append(min(sp))
 
 	def reload_ants(self):
@@ -248,7 +252,6 @@ class Algorithm:
 		self.ant_list = []
 		for i in range(0,self.n):
 			self.ant_list.append(ant(self.city_list[i],n,i))
-			
 
 	def run_without_anim(self,counter):
 		'''
@@ -269,17 +272,17 @@ class Algorithm:
 
 if __name__ == '__main__':
 
-	n = 20
+	n = 10
 	cycle = Algorithm(n)
 	cycle.initial_condition()
 	cycle.init_plot()
-	for i in range(50):
+	for i in range(200):
 		cycle.run_without_anim(i)
 		cycle.init_plot()
 		cycle.shortest_path(i)
 		cycle.reload_ants()
 		print(i)
 	plt.cla()
-	plt.plot(range(50),cycle.performance)
+	plt.plot(range(200),cycle.performance)
 	plt.show()
 
