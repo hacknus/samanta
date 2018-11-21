@@ -11,6 +11,7 @@ class ant:
 		self.tabu_mask = np.ones(n)
 		self.last_path = [town,town]
 		self.path_length_history = []
+		self.history = [town]
 		self.tabu_mask[i] = 0		
 
 	def make_move(self,paths,cities):
@@ -29,6 +30,7 @@ class ant:
 		self.tabu_mask[town_index] = 0						#add last city to tabu mask
 		self.last_path = [self.last_path[1],town]			#set last path
 		self.path_length_history.append(paths[self.i][town_index].distance)
+		self.history.append(town)
 
 	def decision(self,probabilities,cities):
 		'''
@@ -237,6 +239,9 @@ class Algorithm:
 		for a in self.ant_list:
 			sp.append(sum(a.path_length_history))
 		print(min(sp))
+		i = sp.index(min(sp))
+		shortest = np.array([town.position for town in self.ant_list[i].history])
+		plt.plot(shortest[:,0],shortest[:,1],color='red')
 		self.performance.append(min(sp))
 
 	def reload_ants(self):
