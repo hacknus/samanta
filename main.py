@@ -25,11 +25,12 @@ class ant:
 		probabilities = probabilities[self.i]				#only look at the probabilities corresponding to this ant/town (from matrix to list)
 		town = self.decision(probabilities,cities)			#get decision
 		self.position = town 								#make move (update position)
+		new_town_index = cities.index(town)
 		town_index = cities.index(self.last_path[1])
 		#print(town_index,self.last_path[1].i)
 		self.tabu_mask[town_index] = 0						#add last city to tabu mask
 		self.last_path = [self.last_path[1],town]			#set last path
-		self.path_length_history.append(paths[self.i][town_index].distance)
+		self.path_length_history.append(paths[new_town_index][town_index].distance)
 		self.history.append(town)
 
 	def decision(self,probabilities,cities):
@@ -260,13 +261,18 @@ class Algorithm:
 		while True:
 			self.update_feromone()
 			self.draw_all_paths(counter)
+			ant_count = 0
 			for a in self.ant_list:
 				#let all ants make a move
 				if np.count_nonzero(a.tabu_mask) == 0:
+					ant_count += 1
+				else:
+					a.make_move(self.paths,self.city_list)
+				if ant_count == len(self.ant_list):
+					self.shortest_path(counter)
 					plt.savefig("run{}.png".format(counter))
 					plt.cla()
 					return
-				a.make_move(self.paths,self.city_list)
 
 
 
@@ -276,13 +282,12 @@ if __name__ == '__main__':
 	cycle = Algorithm(n)
 	cycle.initial_condition()
 	cycle.init_plot()
-	for i in range(200):
+	for i in range(100):
 		cycle.run_without_anim(i)
 		cycle.init_plot()
-		cycle.shortest_path(i)
 		cycle.reload_ants()
 		print(i)
 	plt.cla()
-	plt.plot(range(200),cycle.performance)
+	plt.plot(range(100),cycle.performance)
 	plt.show()
 
