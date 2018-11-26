@@ -263,7 +263,7 @@ def plot_path(path,accepted_configs,accepted_temps,frac):
             plt.close(fig)
         counter+=1
 
-plot_path("C:\\Users\\NoraS\\Documents\\GitHub\\samanta\\second_run",accepted_configs,accepted_temps,500)
+# plot_path("C:\\Users\\NoraS\\Documents\\GitHub\\samanta\\second_run",accepted_configs,accepted_temps,500)
 
 
 
