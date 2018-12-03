@@ -25,11 +25,14 @@ maybe np.linalg.norm
     """
     n = len(cities)
     dist = [
-        [np.sqrt(
-            (cities[i].position[0] - cities[j].position[0]) ** 2 +
-            (cities[i].position[1] - cities[j].position[1]) ** 2
-        ) for j in range(n)]
+        [np.linalg.norm(cities[i].position-cities[j].position) for j in range(n)]
         for i in range(n)]
+    # dist = [
+    #     [np.sqrt(
+    #         (cities[i].position[0] - cities[j].position[0]) ** 2 +
+    #         (cities[i].position[1] - cities[j].position[1]) ** 2
+    #     ) for j in range(n)]
+    #     for i in range(n)]
     return dist
 
 
@@ -159,7 +162,7 @@ def run(config, t_k, dist, beta):
 # print('dist1=',dist1)
 # -------------------------------------------------------------
 
-cities = random_cities(20)
+cities = random_cities(10)
 cities_dict = {}
 for city in cities:
     cities_dict[city.id] = city
@@ -199,7 +202,7 @@ def simulated_annealing(start_config, dist, t_0, t_min):
             best_config = config
             best_cost = cost(config, dist)
 
-        if counter % 50000 == 0:
+        if counter % 20000 == 0:
             if accepted_configs[-1].all() == best_config.all():
                 break
 
@@ -209,7 +212,7 @@ def simulated_annealing(start_config, dist, t_0, t_min):
 
 
 best_config, best_cost, accepted_configs, accepted_temps, length_accepted_configs = simulated_annealing(start_config,dist,t_0,t_min)
-
+print(best_config, best_cost)
 #
 # fig, ax = plt.subplots(1, 3)
 # for i in range(3):
@@ -249,21 +252,39 @@ def plot_path(path,accepted_configs,accepted_temps,frac):
             x_config.append(x_config[0])
             y_config = [cities_dict[id].position[1] for id in config]
             y_config.append(y_config[0])
+
             fig, ax = plt.subplots(3,1)
+            #
+            # fig= plt.figure()
+            # ax1 = plt.subplot2grid((4, 1), (0, 0), rowspan=2)
+            # ax2 = plt.subplot2grid((4, 1), (0, 0), rowspan=2)
+            # ax3 = plt.subplot2grid((4, 1), (0, 0), rowspan=2)
+            #
+
             ax[0].scatter(x_cities,y_cities)
             ax[0].plot(x_config,y_config)
+            ax[0].set_xlabel('x coordinate')
+            ax[0].set_ylabel('y coordinate')
+            ax[0].set_aspect(1,adjustable='box')
+
 
             ax[1].scatter(counter, accepted_temps[counter], c = 'r',zorder = 1)
             ax[1].plot(range(len(accepted_temps)),accepted_temps, zorder = -1)
+            ax[1].set_xlabel('runs')
+            ax[1].set_ylabel('temperature')
 
             ax[2].plot(range(len(accepted_temps)), length_accepted_configs,zorder= -1)
             ax[2].scatter(counter, length_accepted_configs[counter], c = 'r',zorder= 1)
+            ax[2].set_xlabel('runs')
+            ax[2].set_ylabel('path length')
+            ax[2].annotate(s= 'Pathlength = %.3f'%length_accepted_configs[counter], xy=(len(accepted_configs)*0.6,5))
 
+            # plt.tight_layout()
             fig.savefig('{}\config{}.png'.format(path,counter))
             plt.close(fig)
         counter+=1
 
-# plot_path("C:\\Users\\NoraS\\Documents\\GitHub\\samanta\\second_run",accepted_configs,accepted_temps,500)
+plot_path("C:\\Users\\NoraS\\Documents\\GitHub\\samanta\\third_run",accepted_configs,accepted_temps,500)
 
 
 
