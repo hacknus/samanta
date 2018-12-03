@@ -7,11 +7,11 @@ class ant:
 		self.position = town
 		self.i = i
 		self.n = n
-		self.tabu_mask = np.ones(n)
-		self.last_path = [town,town]
+		self.allowed = np.ones(n)
+		#self.last_path = [town]
 		self.path_length_history = []
 		self.history = [town]
-		self.tabu_mask[i] = 0		
+		self.allowed[i] = 0		
 
 	def make_move(self,paths,cities):
 		''' 
@@ -24,10 +24,11 @@ class ant:
 		town = self.decision(probabilities,cities)			#get decision
 		self.position = town 								#make move (update position)
 		new_town_index = cities.index(town)
-		town_index = cities.index(self.last_path[1])
-		self.tabu_mask[town_index] = 0						#add last city to tabu mask
-		self.last_path = [self.last_path[1],town]			#set last path
-		self.path_length_history.append(paths.distances[new_town_index][town_index])
+		town_index = cities.index(self.history[-1])
+		self.i = new_town_index
+		self.allowed[new_town_index] = 0						#add last city to tabu mask
+		#self.last_path = [self.last_path[1],town]			#set last path
+		self.path_length_history.append(paths.distances[town_index][new_town_index])
 		self.history.append(town)
 
 	def decision(self,probabilities,cities):
@@ -42,14 +43,14 @@ class ant:
 		takes path matrix as input and calculates probability matrix
 		'''
 
-		alpha = 10.
+		alpha = 1.
 		beta = -5.
 		n = self.n
 		p = np.zeros(n)
 		i = self.i
-		self.tabu_mask[self.i] = 0
-
-		p[self.tabu_mask != 0] = np.array(paths.feromones[i])[self.tabu_mask != 0]**alpha * np.array(paths.distances[i])[self.tabu_mask != 0]**beta / np.sum(	np.array(paths.feromones)[i][self.tabu_mask != 0]**alpha * np.array(paths.distances)[i][self.tabu_mask != 0]**beta )
+		self.allowed[self.i] = 0
+		z = np.array(paths.feromones[i])[self.allowed != 0]**alpha * np.array(paths.distances[i])[self.allowed != 0]**beta
+		p[self.allowed != 0] = z/np.sum(z)
 		return p
 
 	def __repr__(self):
@@ -73,14 +74,14 @@ class city:
 		self.i = i
 		self.position = np.array(xy)
 
-	# def __repr__(self):
-	# 	''' for debugging '''
-	# 	return str(self.i)		
+	def __repr__(self):
+		''' for debugging '''
+		return str(self.i)		
 
 
 class Algorithm:
 	''' total algorithm class, easy to import '''
-	def __init__(self,n,rho=0.99,Q=20):
+	def __init__(self,n,rho=0.99,Q=100):
 		self.n = n
 		self.city_list = []		
 		self.ant_list = []		
@@ -100,9 +101,8 @@ class Algorithm:
 
 		self.paths.feromones = self.paths.feromones*self.rho
 		for k in self.ant_list:
-			self.paths.feromones[k.last_path[0].i][k.last_path[1].i] += self.Q/self.paths.distances[k.last_path[0].i][k.last_path[1].i]
-			self.paths.feromones[k.last_path[1].i][k.last_path[0].i] += self.Q/self.paths.distances[k.last_path[1].i][k.last_path[0].i]
-
+			self.paths.feromones[k.history[-2].i][k.history[-1].i] += self.Q#/self.paths.distances[k.history[-2].i][k.history[-1].i]
+			self.paths.feromones[k.history[-1].i][k.history[-2].i] += self.Q#/self.paths.distances[k.history[-1].i][k.history[-2].i]
 
 	def initial_condition(self,set_seed=True):
 		'''
@@ -117,29 +117,30 @@ class Algorithm:
 
 		if set_seed:
 			np.random.seed(0)			#to get each time the same random numbers
-
-		for i in range(1,n-1):
+		square = [(0,0),(0,1),(1,1),(1,0)]
+		for i in range(n):
 			pos = np.random.rand(2)
+			#pos = square[i]
 			self.city_list.append(city(pos,i))
-			self.ant_list.append(ant(self.city_list[i-1],n,i-1))
-		A = city(Apos,0)
-		B = city(Bpos,n-1)
-		self.city_list.append(A)
-		self.ant_list.append(ant(A,n,0))
-		self.city_list.append(B)
-		self.ant_list.append(ant(B,n,n-1))
+			self.ant_list.append(ant(self.city_list[i],n,i))
+		# A = city(Apos,0)
+		# B = city(Bpos,n-1)
+		# self.city_list.append(A)
+		# self.ant_list.append(ant(A,n,0))
+		# self.city_list.append(B)
+		# self.ant_list.append(ant(B,n,n-1))
 		self.paths = Paths(n,self.city_list)
 
 	def init_plot(self):
 		'''
 		initializes plot and plots the cities and ants as scatterplot
 		'''
-		self.fig, self.ax = plt.subplots()
+		#self.fig, self.ax = plt.subplots()
 		self.coordinates_cities = np.array([ [p.position[0],p.position[1]] for p in self.city_list])
 		self.coordinates_ants = np.array([ [a.position.position[0],a.position.position[1]] for a in self.ant_list])
-		self.ax.scatter(self.coordinates_cities[:-2,0],self.coordinates_cities[:-2,1],s=200,color='black',zorder=1)
-		self.ax.scatter(self.coordinates_cities[-2:,0],self.coordinates_cities[-2:,1],s=200,color='orange',zorder=1)	# cities A and B
-		self.ax.scatter(self.coordinates_ants[:,0],self.coordinates_ants[:,1],s=2,color='red',zorder=1)					# all ants
+		plt.scatter(self.coordinates_cities[:,0],self.coordinates_cities[:,1],s=200,color='black',zorder=1)
+		#self.ax.scatter(self.coordinates_cities[-2:,0],self.coordinates_cities[-2:,1],s=200,color='orange',zorder=1)	# cities A and B
+		plt.scatter(self.coordinates_ants[:,0],self.coordinates_ants[:,1],s=2,color='red',zorder=1)					# all ants
 
 	def shortest_path(self,counter):
 		sp = []
@@ -148,7 +149,8 @@ class Algorithm:
 		print(min(sp))
 		i = sp.index(min(sp))
 		shortest = np.array([town.position for town in self.ant_list[i].history])
-		plt.plot(shortest[:,0],shortest[:,1],color='red')
+		plt.title(str(min(sp)))
+		plt.plot(shortest[:,0],shortest[:,1],color='blue')
 		self.performance.append(min(sp))
 		return np.array([town.i for town in self.ant_list[i].history])
 
@@ -159,42 +161,50 @@ class Algorithm:
 		self.ant_list = []
 		for i in range(0,self.n):
 			self.ant_list.append(ant(self.city_list[i],n,i))
-		mask = np.zeros((self.n,self.n))
-		for i in range(len(shortest)-1):
-			mask[shortest[i]][shortest[i+1]] = 1
-			mask[shortest[i+1]][shortest[i]] = 1
-		self.paths.feromones[mask == 0] = 0.1
+		# mask = np.zeros((self.n,self.n))
+		# for i in range(len(shortest)-1):
+		# 	mask[shortest[i]][shortest[i+1]] = 1
+		# 	mask[shortest[i+1]][shortest[i]] = 1
+		# self.paths.feromones[mask == 0] = 0.1
 
 	def run(self,counter):
 		'''
 		lets the ants make their moves until tabu list is filled, then saves the image and returns
 		'''
 		while True:
-			self.update_feromone()
 			#self.draw_all_paths(counter)
 			ant_count = 0
 			for a in self.ant_list:
 				#let all ants make a move
-				if np.count_nonzero(a.tabu_mask) == 0:
+				if np.count_nonzero(a.allowed) == 0:
 					ant_count += 1
+					a.position = a.history[0]
+					town_index = self.city_list.index(a.history[-1])
+					a.history.append(a.history[0])
+					new_town_index = self.city_list.index(a.history[0])
+					a.path_length_history.append(self.paths.distances[town_index][new_town_index])
 				else:
 					a.make_move(self.paths,self.city_list)
-				if ant_count == len(self.ant_list):
-					l = self.shortest_path(counter)
+			if ant_count == len(self.ant_list):
+				self.update_feromone()
+				l = self.shortest_path(counter)
+				if counter % 100 == 0:
 					plt.savefig("run{}.png".format(counter))
 					plt.cla()
-					return l
+				return l
+			self.update_feromone()
+
 
 
 
 
 if __name__ == '__main__':
 
-	n = 20
+	n = 50
 	cycle = Algorithm(n)
 	cycle.initial_condition()
 	cycle.init_plot()
-	for i in range(500):
+	for i in range(1500):
 		shortest = cycle.run(i)
 		cycle.init_plot()
 		cycle.reload_ants(shortest)
