@@ -12,23 +12,27 @@ class ant:
 		self.n = n
 		self.target = target
 		self.home = i
-		self.allowed = np.ones(n)
+		self.allowed = np.ones(self.n)
 		self.path_length_history = []
 		self.history = [town]
-		self.allowed[i] = 0
+		self.allowed[self.i] = 0
 		self.dead = False
 		self.homeward_bound = False
 		self.finished = False
+		self.walk_count = 0
 
-	def take_me_home(self):
+	def take_me_home(self,c):
 		self.target = self.home
+		self.walk_count = c
 		self.homeward_bound = True
-		print("take me home!")
+		self.allowed = np.ones(self.n)
+		self.allowed[self.i] = 0
+		#print("take me home!")
 
 	def kill(self,finished=True):
 		self.dead = True
 		self.finished = finished
-		print("killed ant after {} moves, returned: {}".format(len(self.history),finished))
+		#print("killed ant after {} moves, returned: {}".format(len(self.history),finished))
 
 	def make_move(self,paths,cities):
 		''' 
@@ -62,35 +66,33 @@ class ant:
 		takes path matrix as input and calculates probability matrix
 		'''
 
-		alpha = 1
-		beta = -2.5
-		gamma = -5
-		n = self.n
-		p = np.zeros(n)
-		i = self.i
-		allowed = paths.allowed_paths[i]
-		self.allowed[i] = 0
+		alpha = 2.
+		beta = -5.
+		#gamma = -5
+		p = np.zeros(self.n)
+		allowed = paths.allowed_paths[self.i]
+		self.allowed[self.i] = 0
 		allowed = allowed*self.allowed
 		if np.count_nonzero(allowed) == 0:
 			return False
 		#z = np.array(paths.feromones[i])[self.allowed != 0]**alpha * np.array(paths.distances[i])[self.allowed != 0]**beta
 		if self.homeward_bound:
-			rel_dist = paths.target_distances
-		else:
 			rel_dist = paths.home_distances
+		else:
+			rel_dist = paths.target_distances
 		if np.any(np.array(rel_dist)[allowed != 0] == 0):
-			ptemp = np.zeros(n)
+			ptemp = np.zeros(self.n)
 			ptemp[np.array(rel_dist) == 0] = 1
 			p[allowed != 0] = ptemp[allowed != 0]
 			return p
 		else:
-			z = np.array(paths.feromones[i])[allowed != 0]**alpha * np.array(rel_dist)[allowed != 0]**beta* np.array(paths.distances[i])[allowed != 0]**gamma		
+			z = np.array(paths.feromones[self.i])[allowed != 0]**alpha * np.array(rel_dist)[allowed != 0]**beta#* np.array(paths.distances[i])[allowed != 0]**gamma		
 			p[allowed != 0] = z/np.sum(z)
 			return p
 
 
 class Paths:
-	''' Path object '''
+	''' Data cointainer  '''
 	def __init__(self,n,city_list,indexA,indexB):
 		self.feromones = np.ones((n,n))*0.1 #initial feromone
 		self.distances = np.zeros((n,n))
@@ -101,8 +103,8 @@ class Paths:
 			for j in range(n):
 				self.distances[i][j] = np.linalg.norm(city_list[i].position-city_list[j].position)
 		for i in range(n):
-				self.target_distances[i] = np.linalg.norm(city_list[indexB].position-city_list[i].position)
-				self.home_distances[i] = np.linalg.norm(city_list[indexA].position-city_list[i].position)
+			self.target_distances[i] = np.linalg.norm(city_list[indexB].position-city_list[i].position)
+			self.home_distances[i] = np.linalg.norm(city_list[indexA].position-city_list[i].position)
 
 
 class city:
@@ -118,12 +120,13 @@ class city:
 
 class Algorithm:
 	''' total algorithm class, easy to import '''
-	def __init__(self,destination_index,origin_index,intersections_filename,allowed_streets_filename,background_filename,rho=0.5,Q=100):
+	def __init__(self,destination_index,origin_index,intersections_filename,allowed_streets_filename,background_filename,rho=0.9,Q=100):
 		self.city_list = []		
 		self.ant_list = []		
 		self.paths = []
 		self.destination = None
 		self.origin = None
+		self.ant_num = 10
 		self.intersections_filename = intersections_filename
 		self.allowed_streets_filename = allowed_streets_filename
 		self.background = background_filename
@@ -136,15 +139,17 @@ class Algorithm:
 		self.n = 0
 		self.performance = []
 
-	def update_feromone(self):
+	def update_feromone(self,c):
 		'''
 		updates the feromone attributes of the path matrix elements
 		'''
 
 		self.paths.feromones = self.paths.feromones*self.rho
 		for k in self.ant_list:
-			self.paths.feromones[k.history[-2].i][k.history[-1].i] += self.Q#/self.paths.distances[k.history[-2].i][k.history[-1].i]
-			self.paths.feromones[k.history[-1].i][k.history[-2].i] += self.Q#/self.paths.distances[k.history[-1].i][k.history[-2].i]
+			Q = self.Q
+			self.paths.feromones[k.history[-2].i][k.history[-1].i] += Q/self.paths.distances[k.history[-2].i][k.history[-1].i]
+			self.paths.feromones[k.history[-1].i][k.history[-2].i] += Q/self.paths.distances[k.history[-1].i][k.history[-2].i]
+		self.paths.feromones[self.paths.feromones < 0.1] = 0.1		#prevent feromone levels from going below initial levels
 
 	def initial_condition(self,set_seed=True):
 		'''
@@ -180,7 +185,7 @@ class Algorithm:
 		self.origin = self.city_list[self.index_A]
 		self.destination = self.city_list[self.index_B]
 
-		for i in range(10):
+		for i in range(self.ant_num):
 			self.ant_list.append(ant(self.origin,self.n,self.index_A,self.index_B))
 
 		self.paths = Paths(n,self.city_list,self.index_A,self.index_B)
@@ -213,12 +218,12 @@ class Algorithm:
 			if self.ant_list[i].finished:
 				break
 			else:
-				break
 				self.ant_list.pop(i)
 		print("shortest path: ",min(sp))
 		shortest = np.array([town.position for town in self.ant_list[i].history])
-		plt.title(str(min(sp)))
-		plt.plot(shortest[:,0],shortest[:,1],color='red')
+		if counter % 50 == 0:
+			plt.title(str(min(sp)))
+			plt.plot(shortest[:,0],shortest[:,1],color='red')
 		self.performance.append(min(sp))
 		return np.array([town.i for town in self.ant_list[i].history])
 
@@ -227,7 +232,7 @@ class Algorithm:
 		creates new ants (thus new empty tabu lists)
 		'''
 		self.ant_list = []
-		for i in range(0,10):
+		for i in range(self.ant_num):
 			self.ant_list.append(ant(self.origin,self.n,self.index_A,self.index_B))
 		# mask = np.zeros((self.n,self.n))
 		# for i in range(len(shortest)-1):
@@ -235,41 +240,50 @@ class Algorithm:
 		# 	mask[shortest[i+1]][shortest[i]] = 1
 		# self.paths.feromones[mask == 0] = 0.1
 
+	def spawn_ants(self):
+		'''
+		creates new ants (thus new empty tabu lists)
+		'''
+		#self.ant_list = []
+		print("NEW WAVE")
+		for i in range(self.ant_num):
+			self.ant_list.append(ant(self.origin,self.n,self.index_A,self.index_B))
+
 	def run(self,counter):
 		'''
 		lets the ants make their moves until tabu list is filled, then saves the image and returns
 		'''
-		#c = 0
+		c = 0
 		while True:
 			#self.draw_all_paths(counter)
+			if c % 5 == 0 and c < 20:
+				self.spawn_ants()
 			ant_count = 0
 			for a in self.ant_list:
 				#let all ants make a move
-				if a.i == self.index_B and a.dead == False:
-					a.take_me_home()
-				if a.i == self.index_A and a.dead == False and len(a.history) > 2:
+				if a.i == self.index_B and a.dead == False and not a.homeward_bound:
+					a.take_me_home(c)
+				if a.i == self.index_A and a.dead == False and a.homeward_bound:
 					a.kill()
 				else:
 					if not a.dead:
 						a.make_move(self.paths,self.city_list)
 				if a.dead == False:
 					ant_count += 1
-			# c+=1
-			# if c > 500:
-			# 	print("overflow")
-			# 	ant_count = len(self.ant_list)
+			c+=1
 			if ant_count == 0:
-				self.update_feromone()
+				self.update_feromone(c)
 				l = self.shortest_path(counter)
 				if type(l) == bool:
 					print("NO ANT HAS RETURNED")
-					self.paths.feromones = np.ones((self.n,self.n))*0.1 #reset to initial feromone
-				if counter % 1 == 0:
-					plt.savefig("run{}.png".format(counter),dpi=300)
+					return False
+					#self.paths.feromones = np.ones((self.n,self.n))*0.1 #reset to initial feromone
+				if counter % 50 == 0:
+					plt.savefig("sp2_run{}.png".format(counter),dpi=300)
 					plt.cla()
 				return l
 
-			self.update_feromone()
+			self.update_feromone(c)
 
 
 
@@ -277,21 +291,23 @@ class Algorithm:
 
 if __name__ == '__main__':
 
-	destination_index = 21
+	destination_index = 211#21
 	origin_index = 296
 	intersections_filename = "intersections.csv"
 	allowed_streets_filename = "streets_allowed.csv"
 	background_filename = "hbirchel.png"
 
 	cycle = Algorithm(destination_index,origin_index,intersections_filename,allowed_streets_filename,background_filename)
+	cycle.ant_num = 20
 	cycle.initial_condition()
 	cycle.init_plot()
-	for i in range(50):
+	for i in range(51):
 		shortest = cycle.run(i)
 		cycle.init_plot()
 		cycle.reload_ants(shortest)
 		print(i)
 	plt.cla()
+	plt.clf()
 	plt.plot(range(len(cycle.performance)),cycle.performance)
-	plt.savefig("performance.png")
+	plt.savefig("sp2_performance.png")
 
