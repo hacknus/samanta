@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import subprocess
+from intersection import intersect
 
 
 class Cities:
@@ -32,6 +33,22 @@ maybe np.linalg.norm
     #         (cities[i].position[1] - cities[j].position[1]) ** 2
     #     ) for j in range(n)]
     #     for i in range(n)]
+    return dist
+
+def obstacle(start_point, end_point, obstacle_size, cities,dist):
+    for i in range(len(cities)):
+        for j in range(len(cities)):
+            if intersect(start_point,end_point,cities[i].position, cities[j].position):
+                dist[i][j] = obstacle_size
+                dist[j][i] = obstacle_size
+    return dist
+
+def accelerator(start_point, end_point, acceleration, cities, dist):
+    for i in range(len(cities)):
+        for j in range(len(cities)):
+            if intersect(start_point,end_point,cities[i].position, cities[j].position):
+                dist[i][j] = dist[i][j]*1/acceleration
+                dist[j][i] = dist[j][i]*1/acceleration
     return dist
 
 def swap2cities(config):
@@ -142,7 +159,7 @@ def simulated_annealing(start_config, dist, t_0, t_min):
             best_config = config
             best_cost = cost(config, dist)
 
-        if counter % 13000 == 0:
+        if counter % 50000 == 0:
             if accepted_configs[-1].all() == best_config.all():
                 break
 
@@ -166,18 +183,19 @@ estimates a good starting temperature
     :param dist: distance matrix for used cities
     :return start temperatur
     """
-    random_config = [np.random.permutation(np.arange(10)) for i in range(100)]
+    random_config = [np.random.permutation(np.arange(len(dist))) for i in range(100)]
     cost_random_config = [cost(c, dist) for c in random_config]
     t_0 = (max(cost_random_config) - min(cost_random_config)) * 1.1
     return t_0
 
-cities = random_cities(10)
+cities = random_cities(30)
 cities_dict = {}
 for city in cities:
     cities_dict[city.id] = city
 
 x_cities = [c.position[0] for c in cities]
 y_cities = [c.position[1] for c in cities]
+
 
 dist = dist_array(cities)
 t_0 = temp_0(dist)
@@ -186,11 +204,23 @@ list_id = [city.id for city in cities]
 start_config = np.random.permutation(list_id)
 beta = 0.9995
 
+obst1 = [[0.1, 0.5], [0.3, 0.5]]
+obst2 = [[0.75, 0.8], [0.75, 0.5]]
+obst3 = [[0.25, 0.25], [1, 0.25]]
+acc1 = [[0.2,0],[0.8,1]]
+obstacles = [obst1,obst2,obst3]
+# dist = accelerator(acc1[0],acc1[1],10,cities,dist)
+# dist = obstacle(obst1[0], obst1[1], 100, cities, dist)
+# dist = obstacle(obst2[0], obst2[1], 100, cities, dist)
+# dist = obstacle(obst3[0], obst3[1], 100, cities, dist)
+print(np.array(dist))
+print(x_cities)
+print(y_cities)
 # --------------------
 
 best_config, best_cost, accepted_configs, accepted_temps, length_accepted_configs = simulated_annealing(start_config,dist,t_0,t_min)
 
-def plot_path(path,accepted_configs,accepted_temps,length_accepted_configs,frac):
+def plot_path(path,accepted_configs,accepted_temps,length_accepted_configs,obstacles,accelerators,frac):
     counter = 0
     index = 0
     for config in accepted_configs:
@@ -213,7 +243,18 @@ def plot_path(path,accepted_configs,accepted_temps,length_accepted_configs,frac)
 
 
             ax[0].scatter(x_cities,y_cities)
+            for city in cities:
+                ax[0].annotate(s = str(city.id),xy = city.position)
             ax[0].plot(x_config,y_config)
+            #obstacles:
+            for o in obstacles:
+                o = np.array(o)
+                ax[0].plot(o[:,0],o[:,1])
+
+            for a in accelerators:
+                a = np.array(a)
+                ax[0].plot(a[:,0],a[:,1])
+
             ax[0].set_xlabel('x coordinate')
             ax[0].set_ylabel('y coordinate')
             # ax[0].set(adjustable='box-forced', aspect='equal')
@@ -223,7 +264,7 @@ def plot_path(path,accepted_configs,accepted_temps,length_accepted_configs,frac)
             ax[1].set_xlabel('iterations')
             ax[1].set_ylabel('temperature')
 
-            ax[2].plot(range(len(accepted_temps)), length_accepted_configs,zorder= -1)
+            ax[2].plot(range(len(accepted_configs)), length_accepted_configs,zorder= -1)
             ax[2].scatter(counter, length_accepted_configs[counter], c = 'r',zorder= 1)
             ax[2].set_xlabel('iterations')
             ax[2].set_ylabel('path length')
@@ -234,15 +275,15 @@ def plot_path(path,accepted_configs,accepted_temps,length_accepted_configs,frac)
             plt.close(fig)
         counter+=1
 
-#plot_path("C:\\Users\\NoraS\\Documents\\GitHub\\samanta\\third_run",accepted_configs,accepted_temps,length_accepted_configs,100)
+# plot_path("C:\\Users\\NoraS\\Documents\\GitHub\\samanta\\30_cities_no_obst", accepted_configs, accepted_temps, length_accepted_configs, [] ,[], 1000)
 
-#Animation-----------------------------------------------------------------------------------
-ffmpeg_dir = "C:\\FFmpeg\\bin\\ffmpeg"
-fps = 12
-tmp_dir = "C:\\Users\\NoraS\\Documents\\GitHub\\samanta\\third_run"
-outname = "C:\\Users\\NoraS\\Documents\\GitHub\\samanta\\third_run\\{}cities.3g2     ".format(len(cities))
-
-
-command = "{ffmpeg} -r {fps} -i {tmp_dir}/image_%05d.png -vcodec mpeg4 -q:v 1 -y {out}".format\
-    (ffmpeg=ffmpeg_dir,fps=fps,tmp_dir=tmp_dir,out=outname)
-subprocess.call(command,shell=True)
+# #Animation-----------------------------------------------------------------------------------
+# ffmpeg_dir = "C:\\FFmpeg\\bin\\ffmpeg"
+# fps = 12
+# tmp_dir = "C:\\Users\\NoraS\\Documents\\GitHub\\samanta\\third_run"
+# outname = "C:\\Users\\NoraS\\Documents\\GitHub\\samanta\\third_run\\{}cities.3g2     ".format(len(cities))
+#
+#
+# command = "{ffmpeg} -r {fps} -i {tmp_dir}/image_%05d.png -vcodec mpeg4 -q:v 1 -y {out}".format\
+#     (ffmpeg=ffmpeg_dir,fps=fps,tmp_dir=tmp_dir,out=outname)
+# subprocess.call(command,shell=True)
