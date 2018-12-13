@@ -130,7 +130,7 @@ class Algorithm:
 			self.paths.feromones[k.history[-2].i][k.history[-1].i] += self.Q#/self.paths.distances[k.history[-2].i][k.history[-1].i]
 			self.paths.feromones[k.history[-1].i][k.history[-2].i] += self.Q#/self.paths.distances[k.history[-1].i][k.history[-2].i]
 
-	def initial_condition(self,set_seed=True):
+	def initial_condition(self):
 		'''
 		takes number of cities and a boolean as arguments
 		if boolean is true, then the seed will be fixed such that on every run the 'random' values are the same
