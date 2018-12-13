@@ -1,0 +1,32 @@
+
+
+
+TSP with ants:
+	circular pattern (go back where you started from)
+	very good results on first few tries
+	doesnt converge that clearly, still oscillates
+	more ants per city -> better results
+
+	with obsticles:
+		-if no more allowed cities nearby, they have to cross obsticle -> bad choice, improvement would be to not add it
+
+A to B with ants:
+	masking the map with openCV, plant intersections and get allowed streets
+	rewrite probability calculation dependant on distance to target
+	on target: switch new target to home (homewardbound)
+	all ants start on A
+	dont let them go where they have already been, otherwise they could oscillate between two intersections
+	if only last position is tabu, they run around houses 
+	if ant has no more options -> self.kill() but this leaves feromone trail to death
+	bad results: because feromones disappear too quickly and feromone trails to theath are left
+	we need multiple waves launched within a few moves
+	shortest path is found quickly but then oscillations happen (same issue as in TSP)
+
+
+possible improvements:
+	make alpha an beta time dependant
+	don't add feromone trails if they result in death (A-B) or crossing obsticle (TSP)
+	better adjustment of alpha, beta, rho parameters
+
+
+
