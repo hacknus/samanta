@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from intersection import intersect
 
 class ant:
 	''' ant object'''
@@ -82,10 +83,12 @@ class city:
 
 class Algorithm:
 	''' total algorithm class, easy to import '''
-	def __init__(self,n,rho=0.99,Q=100):
+	def __init__(self,n,objects=False,rho=0.99,Q=100):
 		self.n = n
 		self.city_list = []
 		self.ant_list = []
+		self.objects = []
+		self.o_boolean = objects
 		self.paths = []
 		self.fig = None
 		self.ax = None	
@@ -94,6 +97,13 @@ class Algorithm:
 		self.rho = rho			#evaporation coefficient
 		self.Q = Q				#constant quantity
 		self.performance = []
+		if self.o_boolean:
+			obst1 = [[0.1, 0.5], [0.3, 0.5]]
+			obst2 = [[0.75, 0.8], [0.75, 0.5]]
+			obst3 = [[0.25, 0.25], [1, 0.25]]
+			self.objects.append(obst1)
+			self.objects.append(obst2)
+			self.objects.append(obst3)
 
 	def update_feromone(self):
 		'''
@@ -120,8 +130,16 @@ class Algorithm:
 			pos = np.random.rand(2)
 			self.city_list.append(city(pos,i))
 			self.ant_list.append(ant(self.city_list[i],self.n,i))
+			self.ant_list.append(ant(self.city_list[i],self.n,i))
 
 		self.paths = Paths(self.n,self.city_list)
+		for i in range(self.n):
+			for j in range(self.n):
+				for k in range(len(self.objects)):
+					if intersect(self.city_list[i].position,self.city_list[j].position,self.objects[k][0],self.objects[k][1]):
+						self.paths.distances[i][j] = 10000
+						self.paths.distances[j][i] = 10000
+						self.paths.distances[j][i] = 10000
 
 	def init_plot(self):
 		'''
@@ -130,6 +148,9 @@ class Algorithm:
 		#self.fig, self.ax = plt.subplots()
 		self.coordinates_cities = np.array([ [p.position[0],p.position[1]] for p in self.city_list])
 		plt.scatter(self.coordinates_cities[:,0],self.coordinates_cities[:,1],s=200,color='black',zorder=1)
+		if self.o_boolean:
+			for o in self.objects:
+				plt.plot(np.array(o)[:,0],np.array(o)[:,1],color='red')
 
 	def shortest_path(self,counter):
 		sp = []
@@ -138,7 +159,7 @@ class Algorithm:
 		print(min(sp))
 		i = sp.index(min(sp))
 		shortest = np.array([town.position for town in self.ant_list[i].history])
-		if counter % 50 == 0:
+		if counter % 50 == 0 or counter == 55 or counter == 56:
 			plt.title(str(min(sp)))
 			plt.plot(shortest[:,0],shortest[:,1],color='blue')
 		self.performance.append(min(sp))
@@ -174,7 +195,7 @@ class Algorithm:
 			self.update_feromone()
 			if ant_count == len(self.ant_list):
 				l = self.shortest_path(counter)
-				if counter % 50 == 0:
+				if counter % 50 == 0 or counter == 55 or counter == 56:
 					plt.savefig("run{}.png".format(counter))
 					plt.cla()
 				return l
@@ -186,7 +207,7 @@ class Algorithm:
 if __name__ == '__main__':
 
 	n = 50
-	cycle = Algorithm(n)
+	cycle = Algorithm(n,objects=False)
 	cycle.initial_condition()
 	cycle.init_plot()
 	for i in range(101):
